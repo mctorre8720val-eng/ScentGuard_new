@@ -1,15 +1,18 @@
 package com.example.scentguard.ui.screens.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -17,10 +20,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.User
 import com.example.scentguard.navigation.Screen
-import com.example.scentguard.ui.components.ScentGuardBackground
-import com.example.scentguard.ui.components.ScentGuardCard
+import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +33,26 @@ fun DashboardScreen(
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
+    
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    ScentGuardBackground {
+    ScentGuardNavigationDrawer(
+        user = user,
+        currentRoute = Screen.Dashboard.route,
+        drawerState = drawerState,
+        onNavigate = { screen ->
+            scope.launch { drawerState.close() }
+            navController.navigate(screen.route)
+        },
+        onLogout = {
+            scope.launch { drawerState.close() }
+            mainViewModel.logout()
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Dashboard.route) { inclusive = true }
+            }
+        }
+    ) {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
@@ -43,75 +64,44 @@ fun DashboardScreen(
                             letterSpacing = (-1).sp
                         )
                     },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Outlined.Menu, contentDescription = "Menu")
+                        }
+                    },
                     actions = {
-                        IconButton(onClick = { 
-                            mainViewModel.logout()
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(Screen.Dashboard.route) { inclusive = true }
-                            }
-                        }) {
-                            Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error)
+                        IconButton(onClick = { /* Notifications */ }) {
+                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
+                        containerColor = Color.Transparent
                     )
                 )
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 item {
                     DashboardHeader(user)
                 }
                 
                 item {
+                    ConnectivityStatusBar()
+                }
+
+                item {
                     AirQualityHero()
                 }
                 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        StatusMiniCard(
-                            label = "Fan Status",
-                            value = "OFF",
-                            icon = Icons.Outlined.Air,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        StatusMiniCard(
-                            label = "Auto Mode",
-                            value = "Enabled",
-                            icon = Icons.Outlined.AutoMode,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                
-                item {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        StatusMiniCard(
-                            label = "Temperature",
-                            value = "28°C",
-                            icon = Icons.Outlined.Thermostat,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        StatusMiniCard(
-                            label = "Humidity",
-                            value = "71%",
-                            icon = Icons.Outlined.WaterDrop,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                
-                item {
-                    QuickActions(user?.role ?: "Staff", navController)
+                    MetricsGrid()
                 }
                 
                 item {
@@ -128,28 +118,49 @@ fun DashboardScreen(
 
 @Composable
 fun DashboardHeader(user: User?) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = "Welcome back,",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = user?.fullName ?: "Guest",
+            text = user?.fullName ?: "Guest User",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.5).sp
         )
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+    }
+}
+
+@Composable
+fun ConnectivityStatusBar() {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
-                Icons.Outlined.Restaurant,
+                Icons.Outlined.Bluetooth,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = " ${user?.restaurantName ?: "Setting up..."}",
-                style = MaterialTheme.typography.bodyMedium,
+                text = " Connected to Vent-01",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "Live Sync",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }
@@ -157,37 +168,142 @@ fun DashboardHeader(user: User?) {
 
 @Composable
 fun AirQualityHero() {
-    ScentGuardCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Overall Air Quality",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Excellent",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    "Gas Level: 185 ppm",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = CircleShape,
-                modifier = Modifier.size(64.dp)
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        )
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 2.dp
+    ) {
+        Box(modifier = Modifier.background(gradient)) {
+            Row(
+                modifier = Modifier.padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Air Quality Status",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        "Excellent",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Last updated 2m ago",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                
+                Surface(
+                    modifier = Modifier.size(80.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
+                    shape = CircleShape
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Outlined.Verified,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MetricsGrid() {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            MetricCard(
+                label = "Gas Level",
+                value = "185",
+                unit = "ppm",
+                icon = Icons.Outlined.Cloud,
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "Fan Status",
+                value = "OFF",
+                unit = "",
+                icon = Icons.Outlined.Air,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            MetricCard(
+                label = "Temperature",
+                value = "28",
+                unit = "°C",
+                icon = Icons.Outlined.Thermostat,
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "Humidity",
+                value = "71",
+                unit = "%",
+                icon = Icons.Outlined.WaterDrop,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun MetricCard(label: String, value: String, unit: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 24.sp
+                )
+                if (unit.isNotEmpty()) {
+                    Text(
+                        unit,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(start = 2.dp, bottom = 2.dp)
                     )
                 }
             }
@@ -196,116 +312,58 @@ fun AirQualityHero() {
 }
 
 @Composable
-fun StatusMiniCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
-    ScentGuardCard(modifier = modifier) {
-        Column {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+fun RecentActivitySection() {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.titleLarge,
+                "Recent Activity",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-        }
-    }
-}
-
-@Composable
-fun QuickActions(role: String, navController: NavHostController) {
-    Column {
-        Text(
-            "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (role == "Manager") {
-                ActionButton(
-                    text = "History",
-                    icon = Icons.Outlined.History,
-                    modifier = Modifier.weight(1f)
-                ) { navController.navigate(Screen.History.route) }
-                
-                ActionButton(
-                    text = "Reports",
-                    icon = Icons.Outlined.Assessment,
-                    modifier = Modifier.weight(1f)
-                ) { navController.navigate(Screen.Reports.route) }
-            } else {
-                ActionButton(
-                    text = "Alerts",
-                    icon = Icons.Outlined.Notifications,
-                    modifier = Modifier.weight(1f)
-                ) { navController.navigate(Screen.Notifications.route) }
-                
-                ActionButton(
-                    text = "Profile",
-                    icon = Icons.Outlined.Person,
-                    modifier = Modifier.weight(1f)
-                ) { navController.navigate(Screen.Profile.route) }
+            TextButton(onClick = { /* View All */ }) {
+                Text("View All", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
-}
-
-@Composable
-fun ActionButton(text: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(64.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+        
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun RecentActivitySection() {
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            "Recent Activity",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        
-        ScentGuardCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                ActivityItem("Fan Activated", "Automatic safety trigger", "10:30 AM")
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                ActivityItem("Air Quality Good", "Levels stabilized", "10:45 AM")
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                ActivityItem("System Test", "Sensor check completed", "09:00 AM")
+            Column(modifier = Modifier.padding(8.dp)) {
+                ActivityItem("Fan Activated", "Auto safety trigger", "10:30 AM", Icons.Outlined.AutoMode)
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ActivityItem("Air Quality Good", "Levels stabilized", "10:45 AM", Icons.Outlined.CheckCircleOutline)
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ActivityItem("System Check", "Periodic sensor sync", "09:00 AM", Icons.Outlined.Sync)
             }
         }
     }
 }
 
 @Composable
-fun ActivityItem(title: String, subtitle: String, time: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+fun ActivityItem(title: String, subtitle: String, time: String, icon: ImageVector) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(40.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = CircleShape
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

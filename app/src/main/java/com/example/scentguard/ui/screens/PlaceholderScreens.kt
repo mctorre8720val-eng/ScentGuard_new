@@ -2,30 +2,80 @@ package com.example.scentguard.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.scentguard.ui.components.ScentGuardBackground
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.utils.Resource
+import com.example.scentguard.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlaceholderScreen(name: String, onBack: () -> Unit = {}) {
-    ScentGuardBackground {
+fun PlaceholderScreen(
+    name: String, 
+    navController: NavHostController,
+    mainViewModel: MainViewModel
+) {
+    val userProfileResource by mainViewModel.userProfile.collectAsState()
+    val user = (userProfileResource as? Resource.Success)?.data
+    
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ScentGuardNavigationDrawer(
+        user = user,
+        currentRoute = when(name) {
+            "Notifications" -> Screen.Notifications.route
+            "History" -> Screen.History.route
+            "Reports" -> Screen.Reports.route
+            "Settings" -> Screen.Settings.route
+            "Profile" -> Screen.Profile.route
+            else -> null
+        },
+        drawerState = drawerState,
+        onNavigate = { screen ->
+            scope.launch { drawerState.close() }
+            navController.navigate(screen.route) {
+                popUpTo(Screen.Dashboard.route) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        },
+        onLogout = {
+            scope.launch { drawerState.close() }
+            mainViewModel.logout()
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Dashboard.route) { inclusive = true }
+            }
+        }
+    ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(name) },
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-1).sp
+                        )
+                    },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Outlined.Menu, contentDescription = "Menu")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
+                        containerColor = Color.Transparent
                     )
                 )
             }

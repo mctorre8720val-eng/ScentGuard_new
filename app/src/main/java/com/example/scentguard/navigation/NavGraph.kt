@@ -36,10 +36,20 @@ fun SetupNavGraph(
         composable(Screen.Dashboard.route) {
             DashboardScreen(navController = navController, mainViewModel = mainViewModel)
         }
-        composable(Screen.Notifications.route) { PlaceholderScreen("Notifications") { navController.popBackStack() } }
-        composable(Screen.History.route) { PlaceholderScreen("History") { navController.popBackStack() } }
-        composable(Screen.Reports.route) { PlaceholderScreen("Reports") { navController.popBackStack() } }
-        composable(Screen.Settings.route) { PlaceholderScreen("Settings") { navController.popBackStack() } }
-        composable(Screen.Profile.route) { PlaceholderScreen("Profile") { navController.popBackStack() } }
+        composable(Screen.Notifications.route) { 
+            PlaceholderScreen("Notifications", navController, mainViewModel) 
+        }
+        composable(Screen.History.route) { 
+            PlaceholderScreen("History", navController, mainViewModel) 
+        }
+        composable(Screen.Reports.route) { 
+            PlaceholderScreen("Reports", navController, mainViewModel) 
+        }
+        composable(Screen.Settings.route) { 
+            PlaceholderScreen("Settings", navController, mainViewModel) 
+        }
+        composable(Screen.Profile.route) { 
+            PlaceholderScreen("Profile", navController, mainViewModel) 
+        }
     }
 }
