@@ -8,6 +8,7 @@ import com.example.scentguard.ui.screens.PlaceholderScreen
 import com.example.scentguard.ui.screens.dashboard.DashboardScreen
 import com.example.scentguard.ui.screens.login.ForgotPasswordScreen
 import com.example.scentguard.ui.screens.login.LoginScreen
+import com.example.scentguard.ui.screens.profile.ProfileScreen
 import com.example.scentguard.ui.screens.signup.SignUpScreen
 import com.example.scentguard.ui.screens.splash.SplashScreen
 import com.example.scentguard.viewmodel.MainViewModel
@@ -49,7 +50,7 @@ fun SetupNavGraph(
             PlaceholderScreen("Settings", navController, mainViewModel) 
         }
         composable(Screen.Profile.route) { 
-            PlaceholderScreen("Profile", navController, mainViewModel) 
+            ProfileScreen(navController = navController, mainViewModel = mainViewModel)
         }
     }
 }

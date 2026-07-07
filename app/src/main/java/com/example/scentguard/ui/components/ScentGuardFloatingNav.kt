@@ -22,10 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.example.scentguard.data.model.User
 import com.example.scentguard.navigation.Screen
 
 @Composable
 fun ScentGuardFloatingNav(
+    user: User?,
     currentRoute: String?,
     onNavigate: (Screen) -> Unit
 ) {
@@ -66,13 +68,17 @@ fun ScentGuardFloatingNav(
                     selected = currentRoute == Screen.Dashboard.route,
                     onNavigate = onNavigate
                 )
-                NavItem(
-                    label = "History",
-                    screen = Screen.History,
-                    icon = Icons.Outlined.History,
-                    selected = currentRoute == Screen.History.route,
-                    onNavigate = onNavigate
-                )
+                
+                if (user?.role == "Manager") {
+                    NavItem(
+                        label = "History",
+                        screen = Screen.History,
+                        icon = Icons.Outlined.History,
+                        selected = currentRoute == Screen.History.route,
+                        onNavigate = onNavigate
+                    )
+                }
+
                 NavItem(
                     label = "Alerts",
                     screen = Screen.Notifications,

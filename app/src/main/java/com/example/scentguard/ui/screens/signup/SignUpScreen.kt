@@ -51,11 +51,11 @@ fun SignUpScreen(
         when (registrationState) {
             is Resource.Success -> {
                 snackbarHostState.showSnackbar(
-                    message = "Account created successfully! Please login.",
+                    message = "Account created successfully!",
                     duration = SnackbarDuration.Short
                 )
-                delay(1500)
-                navController.navigate(Screen.Login.route) {
+                delay(500)
+                navController.navigate(Screen.Dashboard.route) {
                     popUpTo(Screen.SignUp.route) { inclusive = true }
                 }
             }

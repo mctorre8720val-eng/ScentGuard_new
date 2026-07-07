@@ -109,6 +109,7 @@ fun PlaceholderScreen(
 
             // The Floating Nav
             ScentGuardFloatingNav(
+                user = user,
                 currentRoute = currentRoute,
                 onNavigate = { screen ->
                     navController.navigate(screen.route) {

@@ -34,6 +34,16 @@ class RegistrationViewModel(
             return
         }
 
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _registrationState.value = Resource.Error("Please enter a valid email address")
+            return
+        }
+
+        if (password.length < 6) {
+            _registrationState.value = Resource.Error("Password must be at least 6 characters")
+            return
+        }
+
         if (password != confirmPassword) {
             _registrationState.value = Resource.Error("Passwords do not match")
             return

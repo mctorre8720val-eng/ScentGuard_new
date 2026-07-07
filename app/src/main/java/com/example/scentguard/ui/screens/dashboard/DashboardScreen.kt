@@ -107,6 +107,10 @@ fun DashboardScreen(
                     }
                     
                     item {
+                        StatisticsSection()
+                    }
+                    
+                    item {
                         RecentActivitySection()
                     }
                     
@@ -118,6 +122,7 @@ fun DashboardScreen(
 
             // The Floating Nav
             ScentGuardFloatingNav(
+                user = user,
                 currentRoute = Screen.Dashboard.route,
                 onNavigate = { screen ->
                     navController.navigate(screen.route) {
@@ -145,6 +150,29 @@ fun DashboardHeader(user: User?) {
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.5).sp
         )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = user?.role ?: "Staff",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = user?.restaurantName ?: "ABC Restaurant",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -260,7 +288,7 @@ fun MetricsGrid() {
             MetricCard(
                 label = "Fan Status",
                 value = "OFF",
-                unit = "",
+                unit = "Auto",
                 icon = Icons.Outlined.Air,
                 modifier = Modifier.weight(1f)
             )
@@ -280,6 +308,40 @@ fun MetricsGrid() {
                 icon = Icons.Outlined.WaterDrop,
                 modifier = Modifier.weight(1f)
             )
+        }
+    }
+}
+
+@Composable
+fun StatisticsSection() {
+    Column {
+        Text(
+            "System Statistics",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MiniStatCard("Alerts Today", "2", Icons.Outlined.WarningAmber, Modifier.weight(1f))
+            MiniStatCard("Fan Runtime", "35m", Icons.Outlined.Timer, Modifier.weight(1f))
+            MiniStatCard("Sensor", "Online", Icons.Outlined.Sensors, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

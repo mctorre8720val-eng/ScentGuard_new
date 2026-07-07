@@ -24,6 +24,11 @@ class LoginViewModel(
             return
         }
 
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _loginState.value = Resource.Error("Please enter a valid email address")
+            return
+        }
+
         viewModelScope.launch {
             _loginState.value = Resource.Loading()
             val result = withContext(Dispatchers.IO) {
