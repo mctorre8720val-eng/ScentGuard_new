@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.User
 import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
@@ -53,65 +54,79 @@ fun DashboardScreen(
             }
         }
     ) {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            "ScentGuard",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-1).sp
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(
+                                "ScentGuard",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-1).sp
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Outlined.Menu, contentDescription = "Menu")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { /* Notifications */ }) {
+                                Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
                         )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Outlined.Menu, contentDescription = "Menu")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { /* Notifications */ }) {
-                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
                     )
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                item {
-                    DashboardHeader(user)
-                }
-                
-                item {
-                    ConnectivityStatusBar()
-                }
+                },
+                containerColor = MaterialTheme.colorScheme.background
+            ) { padding ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    item {
+                        DashboardHeader(user)
+                    }
+                    
+                    item {
+                        ConnectivityStatusBar()
+                    }
 
-                item {
-                    AirQualityHero()
-                }
-                
-                item {
-                    MetricsGrid()
-                }
-                
-                item {
-                    RecentActivitySection()
-                }
-                
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    item {
+                        AirQualityHero()
+                    }
+                    
+                    item {
+                        MetricsGrid()
+                    }
+                    
+                    item {
+                        RecentActivitySection()
+                    }
+                    
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp)) // Extra space for the floating bar
+                    }
                 }
             }
+
+            // The Floating Nav
+            ScentGuardFloatingNav(
+                currentRoute = Screen.Dashboard.route,
+                onNavigate = { screen ->
+                    navController.navigate(screen.route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
         }
     }
 }
