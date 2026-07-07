@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "582385993259",
+    "project_id": "scentguard-63353",
+    "storage_bucket": "scentguard-63353.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:582385993259:android:1b557b70c5165a5f310c6e",
+        "android_client_info": {
+          "package_name": "com.example.scentguard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0iV2ZY1H3KudUqrSIZ9MfIb9DKC7yfs4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
