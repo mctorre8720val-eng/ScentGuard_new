@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.utils.Resource
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginViewModel(
     private val authRepository: AuthRepository = AuthRepository()
@@ -24,7 +26,9 @@ class LoginViewModel(
 
         viewModelScope.launch {
             _loginState.value = Resource.Loading()
-            val result = authRepository.login(email, password)
+            val result = withContext(Dispatchers.IO) {
+                authRepository.login(email, password)
+            }
             result.onSuccess {
                 _loginState.value = Resource.Success(it!!)
             }.onFailure {

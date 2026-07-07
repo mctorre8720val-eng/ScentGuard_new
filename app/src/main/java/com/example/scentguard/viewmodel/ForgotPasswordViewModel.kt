@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.utils.Resource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ForgotPasswordViewModel(
     private val authRepository: AuthRepository = AuthRepository()
@@ -23,7 +25,9 @@ class ForgotPasswordViewModel(
 
         viewModelScope.launch {
             _resetState.value = Resource.Loading()
-            val result = authRepository.resetPassword(email)
+            val result = withContext(Dispatchers.IO) {
+                authRepository.resetPassword(email)
+            }
             result.onSuccess {
                 _resetState.value = Resource.Success(Unit)
             }.onFailure {

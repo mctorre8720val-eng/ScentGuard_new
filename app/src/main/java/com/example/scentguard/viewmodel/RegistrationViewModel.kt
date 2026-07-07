@@ -7,9 +7,11 @@ import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RegistrationViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
@@ -39,7 +41,9 @@ class RegistrationViewModel(
 
         viewModelScope.launch {
             _registrationState.value = Resource.Loading()
-            val authResult = authRepository.signUp(email, password)
+            val authResult = withContext(Dispatchers.IO) {
+                authRepository.signUp(email, password)
+            }
             
             authResult.onSuccess { firebaseUser ->
                 val user = User(
@@ -50,7 +54,9 @@ class RegistrationViewModel(
                     role = role,
                     createdAt = Timestamp.now()
                 )
-                val dbResult = userRepository.saveUserProfile(user)
+                val dbResult = withContext(Dispatchers.IO) {
+                    userRepository.saveUserProfile(user)
+                }
                 dbResult.onSuccess {
                     _registrationState.value = Resource.Success(Unit)
                 }.onFailure {

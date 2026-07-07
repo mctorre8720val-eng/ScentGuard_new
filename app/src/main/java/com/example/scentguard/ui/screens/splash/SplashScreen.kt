@@ -26,6 +26,8 @@ fun SplashScreen(
     mainViewModel: MainViewModel
 ) {
     var startAnimation by remember { mutableStateOf(false) }
+    var isTimerFinished by remember { mutableStateOf(false) }
+    
     val alphaAnim = animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
         animationSpec = tween(durationMillis = 1500),
@@ -34,24 +36,29 @@ fun SplashScreen(
 
     val userProfile by mainViewModel.userProfile.collectAsState()
 
-    LaunchedEffect(key1 = userProfile) {
-        if (!startAnimation) {
-            startAnimation = true
-            delay(2000)
-        }
-        
-        if (userProfile !is Resource.Idle && userProfile !is Resource.Loading) {
+    // Timer logic: ensure splash is shown for at least 2 seconds
+    LaunchedEffect(Unit) {
+        startAnimation = true
+        delay(2000)
+        isTimerFinished = true
+    }
+
+    // Navigation logic: wait for both the timer and a definitive auth state
+    LaunchedEffect(isTimerFinished, userProfile) {
+        if (isTimerFinished) {
             when (userProfile) {
                 is Resource.Success -> {
                     navController.navigate(Screen.Dashboard.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
-                else -> {
+                is Resource.Error -> {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
+                // Stay on splash if Idle or Loading
+                else -> {}
             }
         }
     }
@@ -75,7 +82,7 @@ fun SplashScreen(
                     letterSpacing = (-1).sp
                 )
                 
-                Surface(
+                androidx.compose.material3.Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = androidx.compose.foundation.shape.CircleShape,
                     modifier = Modifier.padding(top = 8.dp)
@@ -100,21 +107,5 @@ fun SplashScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun Surface(
-    color: androidx.compose.ui.graphics.Color,
-    shape: androidx.compose.ui.graphics.Shape,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.material3.Surface(
-        color = color,
-        shape = shape,
-        modifier = modifier
-    ) {
-        content()
     }
 }

@@ -22,6 +22,7 @@ import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.RegistrationViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun SignUpScreen(
@@ -39,148 +40,170 @@ fun SignUpScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     
     val registrationState by viewModel.registrationState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Reset state on entry
+    LaunchedEffect(Unit) {
+        viewModel.resetState()
+    }
 
     LaunchedEffect(registrationState) {
-        if (registrationState is Resource.Success) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(Screen.SignUp.route) { inclusive = true }
+        when (registrationState) {
+            is Resource.Success -> {
+                snackbarHostState.showSnackbar(
+                    message = "Account created successfully! Please login.",
+                    duration = SnackbarDuration.Short
+                )
+                delay(1500)
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.SignUp.route) { inclusive = true }
+                }
             }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = registrationState.message ?: "Registration failed",
+                    duration = SnackbarDuration.Long
+                )
+            }
+            else -> {}
         }
     }
 
     ScentGuardBackground {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            Text(
-                text = "Create Account",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            
-            Text(
-                text = "Join ScentGuard for a fresher workspace",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
-            )
-
-            ScentGuardCard(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = fullName,
-                    onValueChange = { fullName = it },
-                    label = { Text("Full Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = restaurantName,
-                    onValueChange = { restaurantName = it },
-                    label = { Text("Restaurant Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email Address") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = androidx.compose.ui.graphics.Color.Transparent
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(48.dp))
                 
                 Text(
-                    text = "Select your role",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    RadioButton(selected = role == "Manager", onClick = { role = "Manager" })
-                    Text("Manager", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    RadioButton(selected = role == "Staff", onClick = { role = "Staff" })
-                    Text("Staff", style = MaterialTheme.typography.bodyMedium)
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm Password") },
-                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                ScentGuardButton(
                     text = "Create Account",
-                    onClick = { viewModel.register(fullName, restaurantName, email, role, password, confirmPassword) },
-                    isLoading = registrationState is Resource.Loading
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 
-                if (registrationState is Resource.Error) {
+                Text(
+                    text = "Join ScentGuard for a fresher workspace",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                )
+
+                ScentGuardCard(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = { Text("Full Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedTextField(
+                        value = restaurantName,
+                        onValueChange = { restaurantName = it },
+                        label = { Text("Restaurant Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email Address") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     Text(
-                        text = registrationState.message ?: "Error",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp)
+                        text = "Select your role",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        RadioButton(selected = role == "Manager", onClick = { role = "Manager" })
+                        Text("Manager", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        RadioButton(selected = role == "Staff", onClick = { role = "Staff" })
+                        Text("Staff", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    ScentGuardButton(
+                        text = "Create Account",
+                        onClick = { viewModel.register(fullName, restaurantName, email, role, password, confirmPassword) },
+                        isLoading = registrationState is Resource.Loading
                     )
                 }
-            }
 
-            TextButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.padding(vertical = 16.dp)
-            ) {
-                Text(
-                    text = "Already have an account? Login",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                TextButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.padding(vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "Already have an account? Login",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

@@ -16,6 +16,7 @@ import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.ForgotPasswordViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,9 +26,32 @@ fun ForgotPasswordScreen(
 ) {
     var email by remember { mutableStateOf("") }
     val resetState by viewModel.resetState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(resetState) {
+        when (resetState) {
+            is Resource.Success -> {
+                snackbarHostState.showSnackbar(
+                    message = "Reset email sent! Check your inbox.",
+                    duration = SnackbarDuration.Short
+                )
+                delay(2000)
+                navController.popBackStack()
+            }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = resetState.message ?: "Failed to send reset email",
+                    duration = SnackbarDuration.Long
+                )
+            }
+            else -> {}
+        }
+    }
 
     ScentGuardBackground {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             topBar = {
                 TopAppBar(
                     title = { Text("Reset Password") },
@@ -69,7 +93,8 @@ fun ForgotPasswordScreen(
                         onValueChange = { email = it },
                         label = { Text("Email Address") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        singleLine = true
                     )
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -79,24 +104,6 @@ fun ForgotPasswordScreen(
                         onClick = { viewModel.resetPassword(email) },
                         isLoading = resetState is Resource.Loading
                     )
-                    
-                    if (resetState is Resource.Success) {
-                        Text(
-                            text = "Reset email sent! Check your inbox.",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 16.dp)
-                        )
-                    }
-                    
-                    if (resetState is Resource.Error) {
-                        Text(
-                            text = resetState.message ?: "Error",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 16.dp)
-                        )
-                    }
                 }
             }
         }
