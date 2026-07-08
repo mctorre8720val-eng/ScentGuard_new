@@ -45,9 +45,9 @@ fun ProfileScreen(
         user = user,
         currentRoute = Screen.Profile.route,
         drawerState = drawerState,
-        onNavigate = { screen ->
+        onNavigate = { route ->
             scope.launch { drawerState.close() }
-            navController.navigate(screen.route) {
+            navController.navigate(route) {
                 popUpTo(Screen.Dashboard.route) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
@@ -68,9 +68,7 @@ fun ProfileScreen(
                         title = {
                             Text(
                                 "Profile",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-1).sp
+                                style = MaterialTheme.typography.titleLarge
                             )
                         },
                         navigationIcon = {
@@ -176,7 +174,6 @@ fun ProfileHeader(user: User?) {
                 Text(
                     text = user?.fullName?.take(1)?.uppercase() ?: "G",
                     style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }

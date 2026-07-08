@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.User
 import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.ScentGuardFanControl
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
@@ -42,9 +43,13 @@ fun DashboardScreen(
         user = user,
         currentRoute = Screen.Dashboard.route,
         drawerState = drawerState,
-        onNavigate = { screen ->
+        onNavigate = { route ->
             scope.launch { drawerState.close() }
-            navController.navigate(screen.route)
+            navController.navigate(route) {
+                popUpTo(Screen.Dashboard.route) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         },
         onLogout = {
             scope.launch { drawerState.close() }
@@ -61,9 +66,7 @@ fun DashboardScreen(
                         title = {
                             Text(
                                 "ScentGuard",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-1).sp
+                                style = MaterialTheme.typography.titleLarge
                             )
                         },
                         navigationIcon = {
@@ -95,15 +98,21 @@ fun DashboardScreen(
                     }
                     
                     item {
-                        ConnectivityStatusBar()
+                        ConnectivityStatusBar(onClick = { navController.navigate("devices") })
                     }
 
                     item {
-                        AirQualityHero()
+                        AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
                     }
                     
                     item {
                         MetricsGrid()
+                    }
+
+                    if (user?.role == "Manager") {
+                        item {
+                            ScentGuardFanControl()
+                        }
                     }
                     
                     item {
@@ -146,9 +155,7 @@ fun DashboardHeader(user: User?) {
         )
         Text(
             text = user?.fullName ?: "Guest User",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.5).sp
+            style = MaterialTheme.typography.headlineMedium
         )
         Row(
             modifier = Modifier.padding(top = 4.dp),
@@ -177,8 +184,9 @@ fun DashboardHeader(user: User?) {
 }
 
 @Composable
-fun ConnectivityStatusBar() {
+fun ConnectivityStatusBar(onClick: () -> Unit) {
     Surface(
+        onClick = onClick,
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
@@ -200,17 +208,18 @@ fun ConnectivityStatusBar() {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "Live Sync",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+            Icon(
+                Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.outline
             )
         }
     }
 }
 
 @Composable
-fun AirQualityHero() {
+fun AirQualityHero(onViewAnalytics: () -> Unit) {
     val gradient = Brush.verticalGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primaryContainer,
@@ -219,6 +228,7 @@ fun AirQualityHero() {
     )
 
     Surface(
+        onClick = onViewAnalytics,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -238,20 +248,23 @@ fun AirQualityHero() {
                     Text(
                         "Excellent",
                         style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "Last updated 2m ago",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Gas: 185 ppm",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Outlined.Analytics, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
                 
@@ -318,7 +331,6 @@ fun StatisticsSection() {
         Text(
             "System Statistics",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 8.dp)
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -340,7 +352,7 @@ fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modi
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.titleMedium)
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -371,9 +383,7 @@ fun MetricCard(label: String, value: String, unit: String, icon: ImageVector, mo
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 24.sp
+                    style = MaterialTheme.typography.headlineMedium
                 )
                 if (unit.isNotEmpty()) {
                     Text(
@@ -398,8 +408,7 @@ fun RecentActivitySection() {
         ) {
             Text(
                 "Recent Activity",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium
             )
             TextButton(onClick = { /* View All */ }) {
                 Text("View All", style = MaterialTheme.typography.labelLarge)
@@ -442,7 +451,7 @@ fun ActivityItem(title: String, subtitle: String, time: String, icon: ImageVecto
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(time, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)

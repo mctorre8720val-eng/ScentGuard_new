@@ -54,7 +54,8 @@ fun SignUpScreen(
                     message = "Account created successfully!",
                     duration = SnackbarDuration.Short
                 )
-                delay(500)
+                delay(1000)
+                // Navigating to Dashboard as per MCP.md (authenticated user should enter the workspace)
                 navController.navigate(Screen.Dashboard.route) {
                     popUpTo(Screen.SignUp.route) { inclusive = true }
                 }
@@ -87,7 +88,6 @@ fun SignUpScreen(
                 Text(
                     text = "Create Account",
                     style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 

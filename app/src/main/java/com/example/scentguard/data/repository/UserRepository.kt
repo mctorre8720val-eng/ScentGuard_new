@@ -12,11 +12,24 @@ class UserRepository(
     private val auth by lazy { try { authProvider() } catch (e: Exception) { null } }
     private val firestore by lazy { try { firestoreProvider() } catch (e: Exception) { null } }
 
-    suspend fun saveUserProfile(user: User): Result<Unit> {
+    /**
+     * Saves user profile to Firestore.
+     * @param uid The UID from Firebase Auth.
+     * @param user The user profile data.
+     */
+    suspend fun saveUserProfile(uid: String, user: User): Result<Unit> {
         return try {
             val db = firestore ?: return Result.failure(Exception("Firebase not initialized"))
-            val uid = auth?.currentUser?.uid ?: return Result.failure(Exception("User not authenticated"))
-            db.collection("users").document(uid).set(user).await()
+            // Using a simple map for initial save to avoid potential serialization hangs
+            val userMap = hashMapOf(
+                "uid" to uid,
+                "fullName" to user.fullName,
+                "restaurantName" to user.restaurantName,
+                "email" to user.email,
+                "role" to user.role,
+                "createdAt" to (user.createdAt ?: com.google.firebase.Timestamp.now())
+            )
+            db.collection("users").document(uid).set(userMap).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

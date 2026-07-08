@@ -45,9 +45,9 @@ fun PlaceholderScreen(
         user = user,
         currentRoute = currentRoute,
         drawerState = drawerState,
-        onNavigate = { screen ->
+        onNavigate = { route ->
             scope.launch { drawerState.close() }
-            navController.navigate(screen.route) {
+            navController.navigate(route) {
                 popUpTo(Screen.Dashboard.route) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
@@ -68,9 +68,7 @@ fun PlaceholderScreen(
                         title = {
                             Text(
                                 name,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-1).sp
+                                style = MaterialTheme.typography.titleLarge
                             )
                         },
                         navigationIcon = {

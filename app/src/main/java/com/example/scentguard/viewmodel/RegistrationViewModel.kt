@@ -29,6 +29,7 @@ class RegistrationViewModel(
         password: String,
         confirmPassword: String
     ) {
+        // Basic Validation
         if (fullName.isBlank() || restaurantName.isBlank() || email.isBlank() || role.isBlank() || password.isBlank()) {
             _registrationState.value = Resource.Error("All fields are required")
             return
@@ -51,29 +52,52 @@ class RegistrationViewModel(
 
         viewModelScope.launch {
             _registrationState.value = Resource.Loading()
-            val authResult = withContext(Dispatchers.IO) {
-                authRepository.signUp(email, password)
-            }
             
-            authResult.onSuccess { firebaseUser ->
-                val user = User(
-                    uid = firebaseUser!!.uid,
-                    fullName = fullName,
-                    restaurantName = restaurantName,
-                    email = email,
-                    role = role,
-                    createdAt = Timestamp.now()
-                )
-                val dbResult = withContext(Dispatchers.IO) {
-                    userRepository.saveUserProfile(user)
+            try {
+                // 1. Create Firebase Auth Account
+                val authResult = withContext(Dispatchers.IO) {
+                    authRepository.signUp(email, password)
                 }
-                dbResult.onSuccess {
-                    _registrationState.value = Resource.Success(Unit)
-                }.onFailure {
-                    _registrationState.value = Resource.Error(it.message ?: "Failed to save profile")
+
+                if (authResult.isSuccess) {
+                    val firebaseUser = authResult.getOrNull()
+                    if (firebaseUser != null) {
+                        // 2. Prepare Profile Object
+                        val user = User(
+                            uid = firebaseUser.uid,
+                            fullName = fullName,
+                            restaurantName = restaurantName,
+                            email = email,
+                            role = role,
+                            createdAt = Timestamp.now()
+                        )
+
+                        // 3. Save to Firestore
+                        val dbResult = withContext(Dispatchers.IO) {
+                            userRepository.saveUserProfile(firebaseUser.uid, user)
+                        }
+
+                        if (dbResult.isSuccess) {
+                            // Success! We stay logged in as per MCP.md guidelines for Dashboard navigation
+                            _registrationState.value = Resource.Success(Unit)
+                        } else {
+                            // If saving profile fails, we should still probably inform the user
+                            // but the account was created.
+                            _registrationState.value = Resource.Error(
+                                dbResult.exceptionOrNull()?.message ?: "Account created but profile save failed"
+                            )
+                        }
+                    } else {
+                        _registrationState.value = Resource.Error("Account created but failed to retrieve user info")
+                    }
+                } else {
+                    _registrationState.value = Resource.Error(
+                        authResult.exceptionOrNull()?.message ?: "Registration failed"
+                    )
                 }
-            }.onFailure {
-                _registrationState.value = Resource.Error(it.message ?: "Registration failed")
+            } catch (e: Exception) {
+                // Final safety net
+                _registrationState.value = Resource.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }

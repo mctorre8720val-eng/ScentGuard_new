@@ -26,7 +26,7 @@ fun ScentGuardNavigationDrawer(
     user: User?,
     currentRoute: String?,
     drawerState: DrawerState,
-    onNavigate: (Screen) -> Unit,
+    onNavigate: (String) -> Unit, // Changed from Screen to String for flexibility
     onLogout: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -117,19 +117,19 @@ fun ScentGuardNavigationDrawer(
                     label = "Dashboard",
                     icon = Icons.Outlined.Dashboard,
                     selected = currentRoute == Screen.Dashboard.route,
-                    onClick = { onNavigate(Screen.Dashboard) }
+                    onClick = { onNavigate(Screen.Dashboard.route) }
                 )
                 DrawerItem(
                     label = "Devices",
                     icon = Icons.Outlined.Devices,
                     selected = currentRoute == "devices",
-                    onClick = { /* Implement later */ }
+                    onClick = { onNavigate("devices") }
                 )
                 DrawerItem(
                     label = "History",
                     icon = Icons.Outlined.History,
                     selected = currentRoute == Screen.History.route,
-                    onClick = { onNavigate(Screen.History) }
+                    onClick = { onNavigate(Screen.History.route) }
                 )
                 
                 if (user?.role == "Manager") {
@@ -137,7 +137,7 @@ fun ScentGuardNavigationDrawer(
                         label = "Reports",
                         icon = Icons.Outlined.Assessment,
                         selected = currentRoute == Screen.Reports.route,
-                        onClick = { onNavigate(Screen.Reports) }
+                        onClick = { onNavigate(Screen.Reports.route) }
                     )
                 }
 
@@ -152,7 +152,7 @@ fun ScentGuardNavigationDrawer(
                     label = "Profile",
                     icon = Icons.Outlined.Person,
                     selected = currentRoute == Screen.Profile.route,
-                    onClick = { onNavigate(Screen.Profile) }
+                    onClick = { onNavigate(Screen.Profile.route) }
                 )
                 
                 DrawerItem(

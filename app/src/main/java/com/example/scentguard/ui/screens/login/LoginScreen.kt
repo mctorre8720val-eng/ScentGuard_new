@@ -71,7 +71,6 @@ fun LoginScreen(
                 Text(
                     text = "Welcome Back",
                     style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 
