@@ -123,8 +123,8 @@ fun NotificationsScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Notifications.route,
-                onNavigate = { screen ->
-                    navController.navigate(screen.route) {
+                onNavigate = { route ->
+                    navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }
                         launchSingleTop = true
                         restoreState = true

@@ -29,7 +29,7 @@ import com.example.scentguard.navigation.Screen
 fun ScentGuardFloatingNav(
     user: User?,
     currentRoute: String?,
-    onNavigate: (Screen) -> Unit
+    onNavigate: (String) -> Unit
 ) {
     // Fill max size to allow alignment to bottom center of the screen
     Box(
@@ -63,7 +63,7 @@ fun ScentGuardFloatingNav(
             ) {
                 NavItem(
                     label = "Home",
-                    screen = Screen.Dashboard,
+                    route = Screen.Dashboard.route,
                     icon = Icons.Outlined.Dashboard,
                     selected = currentRoute == Screen.Dashboard.route,
                     onNavigate = onNavigate
@@ -72,7 +72,7 @@ fun ScentGuardFloatingNav(
                 if (user?.role == "Manager") {
                     NavItem(
                         label = "History",
-                        screen = Screen.History,
+                        route = Screen.History.route,
                         icon = Icons.Outlined.History,
                         selected = currentRoute == Screen.History.route,
                         onNavigate = onNavigate
@@ -81,14 +81,16 @@ fun ScentGuardFloatingNav(
 
                 NavItem(
                     label = "Alerts",
-                    screen = Screen.Notifications,
+
+
+                    route = Screen.Notifications.route,
                     icon = Icons.Outlined.Notifications,
                     selected = currentRoute == Screen.Notifications.route,
                     onNavigate = onNavigate
                 )
                 NavItem(
                     label = "Profile",
-                    screen = Screen.Profile,
+                    route = Screen.Profile.route,
                     icon = Icons.Outlined.Person,
                     selected = currentRoute == Screen.Profile.route,
                     onNavigate = onNavigate
@@ -101,10 +103,10 @@ fun ScentGuardFloatingNav(
 @Composable
 private fun NavItem(
     label: String,
-    screen: Screen,
+    route: String,
     icon: ImageVector,
     selected: Boolean,
-    onNavigate: (Screen) -> Unit
+    onNavigate: (String) -> Unit
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -128,7 +130,7 @@ private fun NavItem(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = { onNavigate(screen) }
+                onClick = { onNavigate(route) }
             ),
         contentAlignment = Alignment.Center
     ) {

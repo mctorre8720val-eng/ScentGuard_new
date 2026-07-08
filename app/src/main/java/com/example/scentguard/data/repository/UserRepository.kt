@@ -4,6 +4,8 @@ import com.example.scentguard.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
+import java.util.concurrent.TimeUnit
 
 class UserRepository(
     private val authProvider: () -> FirebaseAuth = { FirebaseAuth.getInstance() },
@@ -20,6 +22,7 @@ class UserRepository(
     suspend fun saveUserProfile(uid: String, user: User): Result<Unit> {
         return try {
             val db = firestore ?: return Result.failure(Exception("Firebase not initialized"))
+            
             // Using a simple map for initial save to avoid potential serialization hangs
             val userMap = hashMapOf(
                 "uid" to uid,
@@ -30,7 +33,11 @@ class UserRepository(
                 "onboardingCompleted" to user.onboardingCompleted,
                 "createdAt" to (user.createdAt ?: com.google.firebase.Timestamp.now())
             )
-            db.collection("users").document(uid).set(userMap).await()
+            
+            // Add a timeout to prevent infinite loading if API is disabled or network is stuck
+            withTimeout(10000) { // 10 seconds
+                db.collection("users").document(uid).set(userMap).await()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -44,7 +51,9 @@ class UserRepository(
         return try {
             val db = firestore ?: return Result.failure(Exception("Firebase not initialized"))
             val uid = auth?.currentUser?.uid ?: return Result.failure(Exception("User not authenticated"))
-            db.collection("users").document(uid).update("onboardingCompleted", completed).await()
+            withTimeout(10000) {
+                db.collection("users").document(uid).update("onboardingCompleted", completed).await()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -55,7 +64,10 @@ class UserRepository(
         return try {
             val db = firestore ?: return Result.failure(Exception("Firebase not initialized"))
             val uid = auth?.currentUser?.uid ?: return Result.failure(Exception("User not authenticated"))
-            val snapshot = db.collection("users").document(uid).get().await()
+            
+            val snapshot = withTimeout(10000) {
+                db.collection("users").document(uid).get().await()
+            }
             val user = snapshot.toObject(User::class.java)
             Result.success(user)
         } catch (e: Exception) {
