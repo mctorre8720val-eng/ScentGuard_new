@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="300dp"
+    android:height="300dp"
+    android:viewportWidth="300"
+    android:viewportHeight="300">
+
+    <!-- Radial Pulses -->
+    <path
+        android:pathData="M150,150m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
+        android:strokeWidth="1"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.05" />
+    <path
+        android:pathData="M150,150m-90,0a90,90 0,1 1,180 0a90,90 0,1 1,-180 0"
+        android:strokeWidth="2"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.1" />
+    <path
+        android:pathData="M150,150m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-120 0"
+        android:strokeWidth="3"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.2" />
+
+    <!-- Sensor Hub -->
+    <path
+        android:pathData="M150,110 L110,130 V170 L150,190 L190,170 V130 L150,110 Z"
+        android:fillColor="#006D3B" />
+
+    <!-- Pulse Core -->
+    <path
+        android:pathData="M150,150m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0"
+        android:fillColor="#99F6B4" />
+
+    <!-- Floating Data Nodes -->
+    <path
+        android:pathData="M230,120m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0"
+        android:fillColor="#006D3B"
+        android:fillAlpha="0.4" />
+    <path
+        android:pathData="M70,180m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0"
+        android:fillColor="#006D3B"
+        android:fillAlpha="0.3" />
+
+    <!-- Link Lines -->
+    <path
+        android:pathData="M190,130 L222,120"
+        android:strokeWidth="2"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.2" />
+    <path
+        android:pathData="M110,170 L76,180"
+        android:strokeWidth="2"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.2" />
+
+</vector>

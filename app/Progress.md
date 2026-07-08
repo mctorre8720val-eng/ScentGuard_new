@@ -9,9 +9,9 @@ This document tracks the progress of the ScentGuard Vent project against the roa
 
 | Task | Status | Description |
 | :--- | :--- | :--- |
-| Splash Screen | ✅ Complete | Branding and auto-navigation logic implemented. |
-| Login | ✅ Complete | Firebase Auth login with validation and persistent login support. |
-| Sign Up | ✅ Complete | Firebase Auth registration, user profile creation in Firestore with roles. (Fix applied for loading issue). |
+| Splash Screen | ✅ Complete | Premium "Fresh Tech" branding and auto-navigation logic. |
+| Login | ✅ Complete | Firebase Auth login with premium UI and hybrid onboarding check. |
+| Sign Up | ✅ Complete | Firebase Auth registration with hybrid onboarding check. |
 | Forgot Password | ✅ Complete | Password reset email functionality. |
 | Persistent Login | ✅ Complete | Session persistence across app restarts. |
 | Logout | ✅ Complete | Session clearing functionality. |
@@ -24,6 +24,7 @@ This document tracks the progress of the ScentGuard Vent project against the roa
 | Navigation | ✅ Complete | Jetpack Compose navigation with centralized graph. |
 | Material Design 3 UI | ✅ Complete | High-polish premium redesign inspired by "Now in Android". |
 | Light & Dark Mode | ✅ Complete | Theme persistence using DataStore. Supports Light, Dark, and System Default. |
+| Onboarding Experience | ✅ Complete | Premium 3-page onboarding with original vector illustrations and hybrid persistence. |
 | MVVM Architecture | ✅ Complete | Clean separation of UI, ViewModel, Repository, and Firebase layers. |
 
 ---
@@ -44,7 +45,7 @@ This document tracks the progress of the ScentGuard Vent project against the roa
 | Form Validation | ✅ Complete | Enhanced regex-based email and password length validation. |
 | Accessibility Improvements | 🟡 Partially Complete | Icons have content descriptions. Final semantic review pending. |
 | Responsive Layouts | ✅ Complete | Using scroll states and flexible containers. |
-| Reusable UI Components | ✅ Complete | `ScentGuardCard`, `ScentGuardButton`, `ScentGuardFloatingNav`, `ScentGuardChart`, `ScentGuardFanControl`, etc. |
+| Reusable UI Components | ✅ Complete | `ScentGuardCard`, `ScentGuardButton`, `ScentGuardFloatingNav`, `ScentGuardChart`, etc. |
 | Analytics & Graph UI | ✅ Complete | UI-ready chart component with high-quality mock data. |
 | Manual Fan Control UI | ✅ Complete | Three-state control component (On/Off/Auto) for Managers. |
 | ESP32 / IoT Integration | ❌ Not Started | **Blocked** (Waiting for "Begin IoT Development" command). |
@@ -71,17 +72,16 @@ This document tracks the progress of the ScentGuard Vent project against the roa
 
 ## Audit Findings & Updates
 
-### 1. Light & Dark Mode (Finalized)
-*   Implemented `PreferencesManager` using DataStore.
-*   Updated `SettingsViewModel` to handle theme persistence.
-*   Updated `MainActivity` to observe and apply the theme globally.
-*   Added a selection dialog in `SettingsScreen`.
+### 1. Hybrid Onboarding Persistence (Finalized)
+*   Implemented `onboardingCompleted` flag in Firestore (`users` collection).
+*   Added local caching via DataStore (`PreferencesManager`).
+*   Modified `MainViewModel` to sync local cache with Firestore source of truth.
+*   Updated Splash, Login, and Sign Up screens to respect the new onboarding flow.
 
-### 2. Sign-Up Fix (Pending Verification)
-*   Aligned the sign-up flow with `MCP.md` (direct to Dashboard).
-*   Removed the conflicting logout call.
-*   Enhanced error handling to prevent infinite loading.
+### 2. Premium Onboarding UI (Finalized)
+*   Created 3 original VectorDrawable illustrations (`img_onboarding_welcome`, `img_onboarding_monitoring`, `img_onboarding_ventilation`).
+*   Built `OnboardingScreen` using `HorizontalPager` with smooth animations and transitions.
 
-### 3. Analytics (Finalized)
-*   Chart component is fully integrated into the Reports and Device screens.
-*   Mock data provided via `ChartRepository`.
+### 3. "Fresh Tech" Redesign (Finalized)
+*   Refined Splash, Login, and Sign Up screens with the new visual language.
+*   Added `bg_fresh_tech_bloom` and `ic_abstract_air_waves` assets.

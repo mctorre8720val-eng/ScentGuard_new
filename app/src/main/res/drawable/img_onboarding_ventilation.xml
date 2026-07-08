@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="300dp"
+    android:height="300dp"
+    android:viewportWidth="300"
+    android:viewportHeight="300">
+
+    <!-- Outer Circular Frame -->
+    <path
+        android:pathData="M150,150m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
+        android:strokeWidth="8"
+        android:strokeColor="#D2E8D5"
+        android:strokeAlpha="0.3" />
+
+    <!-- Spiral Air Circulation -->
+    <path
+        android:pathData="M150,50 C210,50 250,100 250,150"
+        android:strokeWidth="4"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.1"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M150,250 C90,250 50,200 50,150"
+        android:strokeWidth="4"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.1"
+        android:strokeLineCap="round" />
+
+    <!-- The Fan Hub -->
+    <path
+        android:pathData="M150,150m-15,0a15,15 0,1 1,30 0a15,15 0,1 1,-30 0"
+        android:fillColor="#006D3B" />
+
+    <!-- 3 Fan Blades -->
+    <path
+        android:pathData="M150,135 C150,100 130,80 135,70 C140,60 160,60 165,70 C170,80 150,100 150,135 Z"
+        android:fillColor="#006D3B" />
+    <path
+        android:pathData="M162,157 C189,178 205,188 214,182 C222,176 219,157 214,148 C209,139 189,129 162,157 Z"
+        android:fillColor="#006D3B" />
+    <path
+        android:pathData="M138,157 C111,178 95,188 86,182 C78,176 81,157 86,148 C91,139 111,129 138,157 Z"
+        android:fillColor="#006D3B" />
+
+    <!-- Small Accent Dot -->
+    <path
+        android:pathData="M150,150m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"
+        android:fillColor="#99F6B4" />
+
+</vector>

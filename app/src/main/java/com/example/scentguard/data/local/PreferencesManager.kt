@@ -17,6 +17,7 @@ class PreferencesManager(private val context: Context) {
     companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode") // "light", "dark", "system"
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
@@ -36,6 +37,16 @@ class PreferencesManager(private val context: Context) {
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[NOTIFICATIONS_ENABLED] = enabled
+        }
+    }
+
+    val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[ONBOARDING_COMPLETED] ?: false
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[ONBOARDING_COMPLETED] = completed
         }
     }
 }

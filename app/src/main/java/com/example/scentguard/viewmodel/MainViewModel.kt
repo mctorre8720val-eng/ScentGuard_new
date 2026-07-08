@@ -1,7 +1,9 @@
 package com.example.scentguard.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.scentguard.ScentGuardApplication
 import com.example.scentguard.data.model.User
 import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.UserRepository
@@ -11,19 +13,31 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val userRepository: UserRepository = UserRepository()
-) : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val authRepository = AuthRepository()
+    private val userRepository = UserRepository()
+    private val preferencesManager = (application as ScentGuardApplication).preferencesManager
 
     private val _userProfile = MutableStateFlow<Resource<User>>(Resource.Loading())
     val userProfile: StateFlow<Resource<User>> = _userProfile
 
+    private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
+    val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted
+
     init {
         observeAuthState()
+        loadLocalOnboardingStatus()
+    }
+
+    private fun loadLocalOnboardingStatus() {
+        viewModelScope.launch {
+            _onboardingCompleted.value = preferencesManager.isOnboardingCompleted.first()
+        }
     }
 
     private fun observeAuthState() {
@@ -32,10 +46,6 @@ class MainViewModel(
                 if (firebaseUser != null) {
                     fetchUserProfile()
                 } else {
-                    // Firebase Auth sometimes takes a moment to restore the local session.
-                    // We wait 1 second before deciding the user is definitely not logged in.
-                    // If the user is restored during this delay, collectLatest will cancel this 
-                    // and start the fetchUserProfile() block above.
                     delay(1000)
                     if (authRepository.currentUser == null) {
                         _userProfile.value = Resource.Error("Not authenticated")
@@ -51,9 +61,14 @@ class MainViewModel(
             userRepository.getUserProfile()
         }
         
-        result.onSuccess {
-            if (it != null) {
-                _userProfile.value = Resource.Success(it)
+        result.onSuccess { user ->
+            if (user != null) {
+                _userProfile.value = Resource.Success(user)
+                // Sync local cache with Firestore source of truth
+                _onboardingCompleted.value = user.onboardingCompleted
+                viewModelScope.launch {
+                    preferencesManager.setOnboardingCompleted(user.onboardingCompleted)
+                }
             } else {
                 _userProfile.value = Resource.Error("Profile not found")
             }
@@ -62,10 +77,27 @@ class MainViewModel(
         }
     }
 
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                userRepository.updateOnboardingStatus(true)
+            }
+            if (result.isSuccess) {
+                preferencesManager.setOnboardingCompleted(true)
+                _onboardingCompleted.value = true
+                // Refresh profile to ensure state consistency
+                fetchUserProfile()
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
-            // The authStateFlow observer will automatically set _userProfile to Error/Idle
+            // Reset local states
+            _userProfile.value = Resource.Idle()
+            _onboardingCompleted.value = false
+            preferencesManager.setOnboardingCompleted(false)
         }
     }
 }

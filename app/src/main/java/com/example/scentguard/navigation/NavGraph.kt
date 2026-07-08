@@ -11,6 +11,7 @@ import com.example.scentguard.ui.screens.notifications.NotificationsScreen
 import com.example.scentguard.ui.screens.settings.SettingsScreen
 import com.example.scentguard.ui.screens.login.ForgotPasswordScreen
 import com.example.scentguard.ui.screens.login.LoginScreen
+import com.example.scentguard.ui.screens.onboarding.OnboardingScreen
 import com.example.scentguard.ui.screens.profile.ProfileScreen
 import com.example.scentguard.ui.screens.reports.ReportsScreen
 import com.example.scentguard.ui.screens.signup.SignUpScreen
@@ -30,10 +31,13 @@ fun SetupNavGraph(
             SplashScreen(navController = navController, mainViewModel = mainViewModel)
         }
         composable(Screen.Login.route) {
-            LoginScreen(navController = navController)
+            LoginScreen(navController = navController, mainViewModel = mainViewModel)
         }
         composable(Screen.SignUp.route) {
-            SignUpScreen(navController = navController)
+            SignUpScreen(navController = navController, mainViewModel = mainViewModel)
+        }
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(navController = navController, viewModel = mainViewModel)
         }
         composable(Screen.ForgotPassword.route) {
             ForgotPasswordScreen(navController = navController)

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- The Sculpted Turbine: Abstract Fan Blade Design -->
+    <!-- Crafted in White Satin Ceramic -->
+
+    <group
+        android:translateX="54"
+        android:translateY="54"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+
+        <!-- 3-Blade Symmetrical Turbine Group -->
+
+        <!-- Blade 1 (Top) -->
+        <group android:rotation="0">
+            <!-- Base Blade Surface -->
+            <path
+                android:pathData="M0,0 C10,-10 25,-40 0,-50 C-25,-40 -10,-10 0,0 Z"
+                android:fillType="nonZero">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:startX="-15"
+                        android:startY="-50"
+                        android:endX="15"
+                        android:endY="0"
+                        android:type="linear">
+                        <item android:offset="0" android:color="#FFFFFF" /> <!-- Highlight Peak -->
+                        <item android:offset="0.6" android:color="#F5F5F5" /> <!-- Soft Satin Body -->
+                        <item android:offset="1" android:color="#E8E8E8" /> <!-- Tonal Falloff -->
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <!-- Twist Detail / Edge Highlight -->
+            <path
+                android:pathData="M0,0 C5,-5 15,-30 0,-45"
+                android:strokeWidth="1.2"
+                android:strokeColor="#FFFFFF"
+                android:strokeAlpha="0.4"
+                android:strokeLineCap="round" />
+        </group>
+
+        <!-- Blade 2 (Bottom Right) -->
+        <group android:rotation="120">
+            <path
+                android:pathData="M0,0 C10,-10 25,-40 0,-50 C-25,-40 -10,-10 0,0 Z"
+                android:fillType="nonZero">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:startX="-15"
+                        android:startY="-50"
+                        android:endX="15"
+                        android:endY="0"
+                        android:type="linear">
+                        <item android:offset="0" android:color="#FDFDFD" />
+                        <item android:offset="1" android:color="#E0E0E0" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <path
+                android:pathData="M0,0 C5,-5 15,-30 0,-45"
+                android:strokeWidth="1.2"
+                android:strokeColor="#FFFFFF"
+                android:strokeAlpha="0.3"
+                android:strokeLineCap="round" />
+        </group>
+
+        <!-- Blade 3 (Bottom Left) -->
+        <group android:rotation="240">
+            <path
+                android:pathData="M0,0 C10,-10 25,-40 0,-50 C-25,-40 -10,-10 0,0 Z"
+                android:fillType="nonZero">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:startX="-15"
+                        android:startY="-50"
+                        android:endX="15"
+                        android:endY="0"
+                        android:type="linear">
+                        <item android:offset="0" android:color="#FDFDFD" />
+                        <item android:offset="1" android:color="#DCDCDC" /> <!-- Slightly darker for depth -->
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <path
+                android:pathData="M0,0 C5,-5 15,-30 0,-45"
+                android:strokeWidth="1.2"
+                android:strokeColor="#FFFFFF"
+                android:strokeAlpha="0.5"
+                android:strokeLineCap="round" />
+        </group>
+
+        <!-- Central Hub: Tactile Core -->
+        <path
+            android:pathData="M0,0m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:centerX="0"
+                    android:centerY="0"
+                    android:gradientRadius="8"
+                    android:type="radial">
+                    <item android:offset="0" android:color="#FFFFFF" /> <!-- Polished center -->
+                    <item android:offset="1" android:color="#F0F0F0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Center Accent (Cyan hint) -->
+        <path
+            android:pathData="M0,0m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"
+            android:fillColor="#00D2D3"
+            android:fillAlpha="0.6" />
+
+    </group>
+
+</vector>

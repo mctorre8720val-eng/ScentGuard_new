@@ -27,9 +27,24 @@ class UserRepository(
                 "restaurantName" to user.restaurantName,
                 "email" to user.email,
                 "role" to user.role,
+                "onboardingCompleted" to user.onboardingCompleted,
                 "createdAt" to (user.createdAt ?: com.google.firebase.Timestamp.now())
             )
             db.collection("users").document(uid).set(userMap).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates the onboarding status for the current user.
+     */
+    suspend fun updateOnboardingStatus(completed: Boolean): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firebase not initialized"))
+            val uid = auth?.currentUser?.uid ?: return Result.failure(Exception("User not authenticated"))
+            db.collection("users").document(uid).update("onboardingCompleted", completed).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

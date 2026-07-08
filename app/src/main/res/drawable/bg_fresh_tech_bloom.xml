@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="1080dp"
+    android:height="1920dp"
+    android:viewportWidth="1080"
+    android:viewportHeight="1920">
+
+    <!-- Primary Background Layer -->
+    <path
+        android:pathData="M0,0h1080v1920h-1080z"
+        android:fillColor="#FBFDF8" />
+
+    <!-- Subtle Radial Bloom (Top Right) -->
+    <path
+        android:pathData="M0,0h1080v1920h-1080z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="900"
+                android:centerY="200"
+                android:gradientRadius="800"
+                android:type="radial">
+                <item android:offset="0" android:color="#D2E8D5" /> <!-- GreenSecondaryContainer -->
+                <item android:offset="1" android:color="#00FBFDF8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle Radial Bloom (Bottom Left) -->
+    <path
+        android:pathData="M0,0h1080v1920h-1080z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="100"
+                android:centerY="1700"
+                android:gradientRadius="1000"
+                android:type="radial">
+                <item android:offset="0" android:color="#BFEAF7" /> <!-- BlueTertiaryContainer -->
+                <item android:offset="1" android:color="#00FBFDF8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

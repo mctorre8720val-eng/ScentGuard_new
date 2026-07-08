@@ -9,25 +9,30 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun ScentGuardCard(
     modifier: Modifier = Modifier,
+    cornerRadius: Dp = 24.dp,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentPadding: Dp = 24.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = containerColor,
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
         )
     ) {
         Column(
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(contentPadding)
         ) {
             content()
         }

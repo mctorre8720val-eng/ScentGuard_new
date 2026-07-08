@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="300dp"
+    android:height="300dp"
+    android:viewportWidth="300"
+    android:viewportHeight="300">
+
+    <!-- Background Glow -->
+    <path
+        android:pathData="M150,150m-100,0a100,100 0,1 1,200 0a100,100 0,1 1,-200 0"
+        android:fillColor="#D2E8D5"
+        android:fillAlpha="0.2" />
+
+    <!-- Fresh Air Waves -->
+    <path
+        android:pathData="M50,100 C80,80 120,120 150,100 C180,80 220,120 250,100"
+        android:strokeWidth="4"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.1"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M60,130 C90,110 130,150 160,130 C190,110 230,150 260,130"
+        android:strokeWidth="6"
+        android:strokeColor="#006D3B"
+        android:strokeAlpha="0.15"
+        android:strokeLineCap="round" />
+
+    <!-- Main Shield Icon -->
+    <path
+        android:pathData="M150,60 L90,85 V140 C90,182 116,221 150,230 C184,221 210,182 210,140 V85 L150,60 Z"
+        android:fillColor="#006D3B" />
+
+    <!-- Decorative Inner Detail -->
+    <path
+        android:pathData="M150,90 L120,105 V140 C120,165 133,188 150,195 C167,188 180,165 180,140 V105 L150,90 Z"
+        android:fillColor="#99F6B4"
+        android:fillAlpha="0.5" />
+
+    <!-- Floating Sparkles -->
+    <path
+        android:pathData="M240,180l4,4m-4,0l4,-4"
+        android:strokeWidth="3"
+        android:strokeColor="#006D3B"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M70,220l3,3m-3,0l3,-3"
+        android:strokeWidth="2"
+        android:strokeColor="#006D3B"
+        android:strokeLineCap="round" />
+
+</vector>

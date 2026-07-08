@@ -8,5 +8,6 @@ data class User(
     val restaurantName: String = "",
     val email: String = "",
     val role: String = "",
+    val onboardingCompleted: Boolean = false,
     val createdAt: Timestamp? = null
 )
