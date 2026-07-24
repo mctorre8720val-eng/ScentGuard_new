@@ -1,0 +1,24 @@
+# Task - Multi-Tenant Role System Implementation
+
+- `[x]` **Phase 1: Restaurant Workspace Foundation**
+    - `[x]` Update `User` model with `restaurantId`
+    - `[x]` Create `Restaurant` data model
+    - `[x]` Update `UserRepository` with restaurant CRUD operations
+- `[x]` **Phase 2: Invitation System**
+    - `[x]` Update `RegistrationViewModel` for Manager/Staff flows
+    - `[x]` Refactor `SignUpScreen` for invitation code entry
+- `[x]` **Phase 3: Staff Management**
+    - `[x]` Create `StaffScreen` for Managers
+    - `[x]` Add "Staff" item to `ScentGuardNavigationDrawer`
+    - `[x]` Update `NavGraph` with new routes
+- `[x]` **Phase 4: Role-Based Security & Data Isolation**
+    - `[x]` Enforce role-checks in ViewModels and Screens
+    - `[x]` Ensure all repository queries use `restaurantId` filtering
+- `[x]` **Phase 5: Authentication & Registration Hardening**
+    - `[x]` Atomic registration logic
+    - `[x]` Fixed navigation deadlocks
+    - `[x]` Comprehensive logging and error feedback
+    - `[x]` End-to-end logic verification
+- `[x]` **Phase 6: Verification & Cleanup**
+    - `[x]` Verify build and end-to-end registration flow
+    - `[x]` Document changes in `Walkthrough`

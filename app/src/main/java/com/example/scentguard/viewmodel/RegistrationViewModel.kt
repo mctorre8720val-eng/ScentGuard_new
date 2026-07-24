@@ -21,16 +21,19 @@ class RegistrationViewModel(
     private val _registrationState = MutableStateFlow<Resource<Unit>>(Resource.Idle())
     val registrationState: StateFlow<Resource<Unit>> = _registrationState
 
+    private val _statusMessage = MutableStateFlow<String>("")
+    val statusMessage: StateFlow<String> = _statusMessage
+
     fun register(
         fullName: String,
-        restaurantName: String,
+        restaurantInput: String, // Can be Name (Manager) or Invite Code (Staff)
         email: String,
         role: String,
         password: String,
         confirmPassword: String
     ) {
         // Basic Validation
-        if (fullName.isBlank() || restaurantName.isBlank() || email.isBlank() || role.isBlank() || password.isBlank()) {
+        if (fullName.isBlank() || restaurantInput.isBlank() || email.isBlank() || role.isBlank() || password.isBlank()) {
             _registrationState.value = Resource.Error("All fields are required")
             return
         }
@@ -52,9 +55,32 @@ class RegistrationViewModel(
 
         viewModelScope.launch {
             _registrationState.value = Resource.Loading()
+            _statusMessage.value = "Starting registration..."
             
             try {
-                // 1. Create Firebase Auth Account
+                var finalRestaurantId = ""
+                var finalRestaurantName = ""
+
+                // 1. Role-Specific Logic
+                if (role == "Staff") {
+                    _statusMessage.value = "Validating invitation code..."
+                    val restaurantResult = withContext(Dispatchers.IO) {
+                        userRepository.getRestaurantByInviteCode(restaurantInput)
+                    }
+                    
+                    if (restaurantResult.isSuccess && restaurantResult.getOrNull() != null) {
+                        val restaurant = restaurantResult.getOrNull()!!
+                        finalRestaurantId = restaurant.id
+                        finalRestaurantName = restaurant.name
+                    } else {
+                        _registrationState.value = Resource.Error("Invalid or expired invitation code")
+                        _statusMessage.value = ""
+                        return@launch
+                    }
+                }
+
+                // 2. Create Firebase Auth Account
+                _statusMessage.value = "Creating your account..."
                 val authResult = withContext(Dispatchers.IO) {
                     authRepository.signUp(email, password)
                 }
@@ -62,47 +88,72 @@ class RegistrationViewModel(
                 if (authResult.isSuccess) {
                     val firebaseUser = authResult.getOrNull()
                     if (firebaseUser != null) {
-                        // 2. Prepare Profile Object
+                        
+                        // 3. Manager-Specific: Create Restaurant Entry
+                        if (role == "Manager") {
+                            _statusMessage.value = "Setting up restaurant workspace..."
+                            val restaurantResult = withContext(Dispatchers.IO) {
+                                userRepository.createRestaurant(restaurantInput, firebaseUser.uid)
+                            }
+                            if (restaurantResult.isSuccess) {
+                                val restaurant = restaurantResult.getOrNull()!!
+                                finalRestaurantId = restaurant.id
+                                finalRestaurantName = restaurant.name
+                            } else {
+                                // ATOMICITY FAIL: Auth created, but Firestore restaurant failed
+                                _registrationState.value = Resource.Error(
+                                    "Account created, but failed to set up restaurant: ${restaurantResult.exceptionOrNull()?.message}"
+                                )
+                                _statusMessage.value = ""
+                                return@launch
+                            }
+                        }
+
+                        // 4. Prepare Profile Object
                         val user = User(
                             uid = firebaseUser.uid,
                             fullName = fullName,
-                            restaurantName = restaurantName,
+                            restaurantName = finalRestaurantName,
+                            restaurantId = finalRestaurantId,
                             email = email,
                             role = role,
                             createdAt = Timestamp.now()
                         )
 
-                        // 3. Save to Firestore
+                        // 5. Save to Firestore
+                        _statusMessage.value = "Finalizing user profile..."
                         val dbResult = withContext(Dispatchers.IO) {
                             userRepository.saveUserProfile(firebaseUser.uid, user)
                         }
 
                         if (dbResult.isSuccess) {
-                            // Success! We stay logged in as per MCP.md guidelines for Dashboard navigation
+                            _statusMessage.value = "Registration complete!"
                             _registrationState.value = Resource.Success(Unit)
                         } else {
-                            // If saving profile fails, we should still probably inform the user
-                            // but the account was created.
+                            // ATOMICITY FAIL: Auth created, but Firestore user profile failed
                             _registrationState.value = Resource.Error(
-                                dbResult.exceptionOrNull()?.message ?: "Account created but profile save failed"
+                                "Account created, but profile setup failed: ${dbResult.exceptionOrNull()?.message}"
                             )
+                            _statusMessage.value = ""
                         }
                     } else {
                         _registrationState.value = Resource.Error("Account created but failed to retrieve user info")
+                        _statusMessage.value = ""
                     }
                 } else {
-                    _registrationState.value = Resource.Error(
-                        authResult.exceptionOrNull()?.message ?: "Registration failed"
-                    )
+                    val errorMessage = authResult.exceptionOrNull()?.message ?: "Registration failed"
+                    _registrationState.value = Resource.Error(errorMessage)
+                    _statusMessage.value = ""
                 }
             } catch (e: Exception) {
-                // Final safety net
                 _registrationState.value = Resource.Error(e.message ?: "An unexpected error occurred")
+                _statusMessage.value = ""
             }
         }
     }
 
     fun resetState() {
         _registrationState.value = Resource.Idle()
+        _statusMessage.value = ""
     }
 }

@@ -6,6 +6,7 @@ data class User(
     val uid: String = "",
     val fullName: String = "",
     val restaurantName: String = "",
+    val restaurantId: String = "",
     val email: String = "",
     val role: String = "",
     val onboardingCompleted: Boolean = false,

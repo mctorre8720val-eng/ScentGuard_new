@@ -41,6 +41,15 @@ fun HistoryScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
+    // Security check: Only Managers can access History
+    if (user != null && user.role != "Manager") {
+        LaunchedEffect(Unit) {
+            navController.navigate(Screen.Dashboard.route) {
+                popUpTo(Screen.Dashboard.route) { inclusive = true }
+            }
+        }
+    }
+
     val historyState by viewModel.historyState.collectAsState()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)

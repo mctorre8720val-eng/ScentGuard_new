@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,7 +28,7 @@ import com.example.scentguard.ui.components.ScentGuardBackground
 import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
-    import com.example.scentguard.viewmodel.MainViewModel
+import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.RegistrationViewModel
 import kotlinx.coroutines.delay
 
@@ -39,7 +40,7 @@ fun SignUpScreen(
     viewModel: RegistrationViewModel = viewModel()
 ) {
     var fullName by remember { mutableStateOf("") }
-    var restaurantName by remember { mutableStateOf("") }
+    var restaurantInput by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -49,6 +50,8 @@ fun SignUpScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     
     val registrationState by viewModel.registrationState.collectAsState()
+    val statusMessage by viewModel.statusMessage.collectAsState()
+    
     val onboardingCompleted by mainViewModel.onboardingCompleted.collectAsState()
     val userProfile by mainViewModel.userProfile.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -69,11 +72,14 @@ fun SignUpScreen(
                 popUpTo(Screen.SignUp.route) { inclusive = true }
             }
         }
-        
+    }
+
+    LaunchedEffect(registrationState) {
         if (registrationState is Resource.Error) {
             snackbarHostState.showSnackbar(
                 message = registrationState.message ?: "Registration failed",
-                duration = SnackbarDuration.Long
+                duration = SnackbarDuration.Long,
+                actionLabel = "Retry"
             )
         }
     }
@@ -147,16 +153,21 @@ fun SignUpScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         OutlinedTextField(
-                            value = restaurantName,
-                            onValueChange = { restaurantName = it },
-                            label = { Text("Restaurant Name") },
+                            value = restaurantInput,
+                            onValueChange = { restaurantInput = it },
+                            label = { 
+                                Text(if (role == "Manager") "Restaurant Name" else "Invitation Code") 
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            )
+                            ),
+                            placeholder = {
+                                if (role == "Staff") Text("Enter 6-digit code")
+                            }
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
@@ -239,11 +250,33 @@ fun SignUpScreen(
                             )
                         )
                         
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        if (registrationState is Resource.Loading) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                                Text(
+                                    text = statusMessage,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 8.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
                         
                         ScentGuardButton(
                             text = "Create Account",
-                            onClick = { viewModel.register(fullName, restaurantName, email, role, password, confirmPassword) },
+                            onClick = { viewModel.register(fullName, restaurantInput, email, role, password, confirmPassword) },
                             isLoading = registrationState is Resource.Loading
                         )
                     }

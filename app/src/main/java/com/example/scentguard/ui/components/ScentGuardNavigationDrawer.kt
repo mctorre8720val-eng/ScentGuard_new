@@ -134,6 +134,12 @@ fun ScentGuardNavigationDrawer(
                 
                 if (user?.role == "Manager") {
                     DrawerItem(
+                        label = "Staff",
+                        icon = Icons.Outlined.People,
+                        selected = currentRoute == "staff",
+                        onClick = { onNavigate("staff") }
+                    )
+                    DrawerItem(
                         label = "Reports",
                         icon = Icons.Outlined.Assessment,
                         selected = currentRoute == Screen.Reports.route,

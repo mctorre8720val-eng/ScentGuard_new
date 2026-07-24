@@ -9,7 +9,6 @@ import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -23,7 +22,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val userRepository = UserRepository()
     private val preferencesManager = (application as ScentGuardApplication).preferencesManager
 
-    private val _userProfile = MutableStateFlow<Resource<User>>(Resource.Loading())
+    private val _userProfile = MutableStateFlow<Resource<User>>(Resource.Idle())
     val userProfile: StateFlow<Resource<User>> = _userProfile
 
     private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
@@ -46,34 +45,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (firebaseUser != null) {
                     fetchUserProfile()
                 } else {
-                    delay(1000)
-                    if (authRepository.currentUser == null) {
-                        _userProfile.value = Resource.Error("Not authenticated")
-                    }
+                    // Logout or No user
+                    _userProfile.value = Resource.Error("Not authenticated")
+                    _onboardingCompleted.value = false
                 }
             }
         }
     }
 
-    private suspend fun fetchUserProfile() {
-        _userProfile.value = Resource.Loading()
-        val result = withContext(Dispatchers.IO) {
-            userRepository.getUserProfile()
-        }
-        
-        result.onSuccess { user ->
-            if (user != null) {
-                _userProfile.value = Resource.Success(user)
-                // Sync local cache with Firestore source of truth
-                _onboardingCompleted.value = user.onboardingCompleted
-                viewModelScope.launch {
-                    preferencesManager.setOnboardingCompleted(user.onboardingCompleted)
-                }
-            } else {
-                _userProfile.value = Resource.Error("Profile not found")
+    fun fetchUserProfile() {
+        viewModelScope.launch {
+            _userProfile.value = Resource.Loading()
+            val result = withContext(Dispatchers.IO) {
+                userRepository.getUserProfile()
             }
-        }.onFailure {
-            _userProfile.value = Resource.Error(it.message ?: "Failed to fetch profile")
+            
+            result.onSuccess { user ->
+                if (user != null) {
+                    _userProfile.value = Resource.Success(user)
+                    // Sync local cache with Firestore source of truth
+                    _onboardingCompleted.value = user.onboardingCompleted
+                    preferencesManager.setOnboardingCompleted(user.onboardingCompleted)
+                } else {
+                    _userProfile.value = Resource.Error("Profile not found")
+                }
+            }.onFailure {
+                _userProfile.value = Resource.Error(it.message ?: "Failed to fetch profile")
+            }
         }
     }
 

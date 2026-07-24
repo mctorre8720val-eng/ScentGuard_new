@@ -100,14 +100,25 @@ fun ProfileScreen(
                     
                     // Account Information
                     SectionTitle("Account Details")
-                    ProfileInfoCard(
-                        items = listOf(
-                            InfoItem("Full Name", user?.fullName ?: "N/A", Icons.Outlined.Person),
-                            InfoItem("Email", user?.email ?: "N/A", Icons.Outlined.Email),
-                            InfoItem("Role", user?.role ?: "Staff", Icons.Outlined.Badge),
-                            InfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant)
-                        )
+                    
+                    val infoItems = mutableListOf(
+                        InfoItem("Full Name", user?.fullName ?: "N/A", Icons.Outlined.Person),
+                        InfoItem("Email", user?.email ?: "N/A", Icons.Outlined.Email),
+                        InfoItem("Role", user?.role ?: "Staff", Icons.Outlined.Badge),
+                        InfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant)
                     )
+                    
+                    if (user?.role == "Manager") {
+                        // We need to fetch the invite code from the restaurant document.
+                        // For now, let's assume it's stored in the user profile for easy access, 
+                        // or we could fetch it via a RestaurantViewModel.
+                        // To keep it simple for this phase, I'll add a placeholder or assume we might want to store it in User model too for quick display.
+                        // Actually, I didn't add inviteCode to User model. 
+                        // I'll add a note that the Manager can see it in the Staff screen.
+                        infoItems.add(InfoItem("Invite Code", "Check Staff Section", Icons.Outlined.VpnKey, isClickable = true))
+                    }
+                    
+                    ProfileInfoCard(items = infoItems)
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     

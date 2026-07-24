@@ -29,6 +29,7 @@ import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.LoginViewModel
 import com.example.scentguard.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,7 @@ fun LoginScreen(
         viewModel.resetState()
     }
 
+    // Combined Navigation Logic
     LaunchedEffect(loginState, onboardingCompleted, userProfile) {
         if (loginState is Resource.Success && onboardingCompleted != null && userProfile is Resource.Success) {
             val destination = if (onboardingCompleted == true) Screen.Dashboard.route else Screen.Onboarding.route
@@ -57,12 +59,27 @@ fun LoginScreen(
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
         }
-        
+    }
+
+    // Error Handling
+    LaunchedEffect(loginState, userProfile) {
         if (loginState is Resource.Error) {
             snackbarHostState.showSnackbar(
                 message = loginState.message ?: "Login failed",
                 duration = SnackbarDuration.Long
             )
+            viewModel.resetState()
+        }
+        
+        if (loginState is Resource.Success && userProfile is Resource.Error) {
+            val errorMsg = userProfile.message ?: "Failed to fetch user profile"
+            snackbarHostState.showSnackbar(
+                message = "Auth Success, but: $errorMsg",
+                duration = SnackbarDuration.Long,
+                actionLabel = "Retry"
+            )
+            // If it's a "Not authenticated" error while loginState is Success, it's a synchronization issue.
+            // If it's "Profile not found", the user exists in Auth but not Firestore.
         }
     }
 
@@ -167,10 +184,12 @@ fun LoginScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
+                        val isAnyLoading = loginState is Resource.Loading || (loginState is Resource.Success && userProfile is Resource.Loading)
+                        
                         ScentGuardButton(
                             text = "Sign In",
                             onClick = { viewModel.login(email, password) },
-                            isLoading = loginState is Resource.Loading
+                            isLoading = isAnyLoading
                         )
                     }
 

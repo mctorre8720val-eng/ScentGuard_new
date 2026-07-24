@@ -16,6 +16,7 @@ import com.example.scentguard.ui.screens.profile.ProfileScreen
 import com.example.scentguard.ui.screens.reports.ReportsScreen
 import com.example.scentguard.ui.screens.signup.SignUpScreen
 import com.example.scentguard.ui.screens.splash.SplashScreen
+import com.example.scentguard.ui.screens.staff.StaffScreen
 import com.example.scentguard.viewmodel.MainViewModel
 
 @Composable
@@ -47,6 +48,9 @@ fun SetupNavGraph(
         }
         composable("devices") {
             DevicesScreen(navController = navController, mainViewModel = mainViewModel)
+        }
+        composable("staff") {
+            StaffScreen(navController = navController, mainViewModel = mainViewModel)
         }
         composable(Screen.Notifications.route) { 
             NotificationsScreen(navController = navController, mainViewModel = mainViewModel)
