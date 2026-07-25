@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -72,14 +74,22 @@ fun LoginScreen(
         }
         
         if (loginState is Resource.Success && userProfile is Resource.Error) {
-            val errorMsg = userProfile.message ?: "Failed to fetch user profile"
-            snackbarHostState.showSnackbar(
-                message = "Auth Success, but: $errorMsg",
-                duration = SnackbarDuration.Long,
-                actionLabel = "Retry"
-            )
-            // If it's a "Not authenticated" error while loginState is Success, it's a synchronization issue.
-            // If it's "Profile not found", the user exists in Auth but not Firestore.
+            if (userProfile.message == "MISSING_PROFILE") {
+                val result = snackbarHostState.showSnackbar(
+                    message = "Account found, but profile is incomplete.",
+                    actionLabel = "Complete Now",
+                    duration = SnackbarDuration.Indefinite
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    navController.navigate(Screen.SignUp.route)
+                }
+            } else {
+                snackbarHostState.showSnackbar(
+                    message = "Auth Success, but: ${userProfile.message ?: "Failed to fetch profile"}",
+                    duration = SnackbarDuration.Long,
+                    actionLabel = "Retry"
+                )
+            }
         }
     }
 
@@ -144,6 +154,10 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                autoCorrectEnabled = false
+                            ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)

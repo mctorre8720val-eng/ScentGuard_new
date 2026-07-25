@@ -28,6 +28,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
     val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted
 
+    private val _isUserAuthenticated = MutableStateFlow(authRepository.currentUser != null)
+    val isUserAuthenticated: StateFlow<Boolean> = _isUserAuthenticated
+
     init {
         observeAuthState()
         loadLocalOnboardingStatus()
@@ -42,6 +45,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun observeAuthState() {
         viewModelScope.launch {
             authRepository.authStateFlow.collectLatest { firebaseUser ->
+                _isUserAuthenticated.value = firebaseUser != null
                 if (firebaseUser != null) {
                     fetchUserProfile()
                 } else {
@@ -67,7 +71,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _onboardingCompleted.value = user.onboardingCompleted
                     preferencesManager.setOnboardingCompleted(user.onboardingCompleted)
                 } else {
-                    _userProfile.value = Resource.Error("Profile not found")
+                    // Specific error for missing documents
+                    _userProfile.value = Resource.Error("MISSING_PROFILE")
                 }
             }.onFailure {
                 _userProfile.value = Resource.Error(it.message ?: "Failed to fetch profile")

@@ -1,5 +1,6 @@
 package com.example.scentguard.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.data.repository.AuthRepository
@@ -15,16 +16,23 @@ class LoginViewModel(
     private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
+    private val TAG = "LoginViewModel"
+
     private val _loginState = MutableStateFlow<Resource<FirebaseUser>>(Resource.Idle())
     val loginState: StateFlow<Resource<FirebaseUser>> = _loginState
 
     fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
+        val trimmedEmail = email.trim()
+        
+        Log.d(TAG, "Attempting login for email: ${trimmedEmail.take(3)}***")
+
+        if (trimmedEmail.isBlank() || password.isBlank()) {
             _loginState.value = Resource.Error("Fields cannot be empty")
             return
         }
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
+            Log.w(TAG, "Validation failed: Invalid email format for '${trimmedEmail.take(3)}***'")
             _loginState.value = Resource.Error("Please enter a valid email address")
             return
         }
@@ -32,11 +40,13 @@ class LoginViewModel(
         viewModelScope.launch {
             _loginState.value = Resource.Loading()
             val result = withContext(Dispatchers.IO) {
-                authRepository.login(email, password)
+                authRepository.login(trimmedEmail, password)
             }
             result.onSuccess {
+                Log.d(TAG, "Login success for ${trimmedEmail.take(3)}***")
                 _loginState.value = Resource.Success(it!!)
             }.onFailure {
+                Log.e(TAG, "Login failed for ${trimmedEmail.take(3)}***", it)
                 _loginState.value = Resource.Error(it.message ?: "Login failed")
             }
         }

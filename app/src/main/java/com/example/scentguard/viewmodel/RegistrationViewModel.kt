@@ -1,5 +1,6 @@
 package com.example.scentguard.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.data.model.User
@@ -18,6 +19,8 @@ class RegistrationViewModel(
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
 
+    private val TAG = "RegistrationViewModel"
+
     private val _registrationState = MutableStateFlow<Resource<Unit>>(Resource.Idle())
     val registrationState: StateFlow<Resource<Unit>> = _registrationState
 
@@ -32,13 +35,21 @@ class RegistrationViewModel(
         password: String,
         confirmPassword: String
     ) {
+        val trimmedFullName = fullName.trim()
+        val trimmedRestaurantInput = restaurantInput.trim()
+        val trimmedEmail = email.trim()
+        val trimmedRole = role.trim()
+
+        Log.d(TAG, "Attempting registration for email: ${trimmedEmail.take(3)}***")
+
         // Basic Validation
-        if (fullName.isBlank() || restaurantInput.isBlank() || email.isBlank() || role.isBlank() || password.isBlank()) {
+        if (trimmedFullName.isBlank() || trimmedRestaurantInput.isBlank() || trimmedEmail.isBlank() || trimmedRole.isBlank() || password.isBlank()) {
             _registrationState.value = Resource.Error("All fields are required")
             return
         }
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
+            Log.w(TAG, "Validation failed: Invalid email format for '${trimmedEmail.take(3)}***'")
             _registrationState.value = Resource.Error("Please enter a valid email address")
             return
         }
@@ -62,10 +73,10 @@ class RegistrationViewModel(
                 var finalRestaurantName = ""
 
                 // 1. Role-Specific Logic
-                if (role == "Staff") {
+                if (trimmedRole == "Staff") {
                     _statusMessage.value = "Validating invitation code..."
                     val restaurantResult = withContext(Dispatchers.IO) {
-                        userRepository.getRestaurantByInviteCode(restaurantInput)
+                        userRepository.getRestaurantByInviteCode(trimmedRestaurantInput)
                     }
                     
                     if (restaurantResult.isSuccess && restaurantResult.getOrNull() != null) {
@@ -79,70 +90,75 @@ class RegistrationViewModel(
                     }
                 }
 
-                // 2. Create Firebase Auth Account
-                _statusMessage.value = "Creating your account..."
-                val authResult = withContext(Dispatchers.IO) {
-                    authRepository.signUp(email, password)
+                // 2. Auth Account Handling
+                var firebaseUid = authRepository.currentUser?.uid
+                
+                if (firebaseUid == null) {
+                    _statusMessage.value = "Creating your account..."
+                    val authResult = withContext(Dispatchers.IO) {
+                        authRepository.signUp(trimmedEmail, password)
+                    }
+
+                    if (authResult.isSuccess) {
+                        firebaseUid = authResult.getOrNull()?.uid
+                    } else {
+                        val errorMessage = authResult.exceptionOrNull()?.message ?: "Registration failed"
+                        _registrationState.value = Resource.Error(errorMessage)
+                        _statusMessage.value = ""
+                        return@launch
+                    }
+                } else {
+                    Log.d(TAG, "User already authenticated, skipping Auth creation for UID: $firebaseUid")
                 }
 
-                if (authResult.isSuccess) {
-                    val firebaseUser = authResult.getOrNull()
-                    if (firebaseUser != null) {
-                        
-                        // 3. Manager-Specific: Create Restaurant Entry
-                        if (role == "Manager") {
-                            _statusMessage.value = "Setting up restaurant workspace..."
-                            val restaurantResult = withContext(Dispatchers.IO) {
-                                userRepository.createRestaurant(restaurantInput, firebaseUser.uid)
-                            }
-                            if (restaurantResult.isSuccess) {
-                                val restaurant = restaurantResult.getOrNull()!!
-                                finalRestaurantId = restaurant.id
-                                finalRestaurantName = restaurant.name
-                            } else {
-                                // ATOMICITY FAIL: Auth created, but Firestore restaurant failed
-                                _registrationState.value = Resource.Error(
-                                    "Account created, but failed to set up restaurant: ${restaurantResult.exceptionOrNull()?.message}"
-                                )
-                                _statusMessage.value = ""
-                                return@launch
-                            }
+                if (firebaseUid != null) {
+                    // 3. Manager-Specific: Create Restaurant Entry
+                    if (trimmedRole == "Manager") {
+                        _statusMessage.value = "Setting up restaurant workspace..."
+                        val restaurantResult = withContext(Dispatchers.IO) {
+                            userRepository.createRestaurant(trimmedRestaurantInput, firebaseUid)
                         }
-
-                        // 4. Prepare Profile Object
-                        val user = User(
-                            uid = firebaseUser.uid,
-                            fullName = fullName,
-                            restaurantName = finalRestaurantName,
-                            restaurantId = finalRestaurantId,
-                            email = email,
-                            role = role,
-                            createdAt = Timestamp.now()
-                        )
-
-                        // 5. Save to Firestore
-                        _statusMessage.value = "Finalizing user profile..."
-                        val dbResult = withContext(Dispatchers.IO) {
-                            userRepository.saveUserProfile(firebaseUser.uid, user)
-                        }
-
-                        if (dbResult.isSuccess) {
-                            _statusMessage.value = "Registration complete!"
-                            _registrationState.value = Resource.Success(Unit)
+                        if (restaurantResult.isSuccess) {
+                            val restaurant = restaurantResult.getOrNull()!!
+                            finalRestaurantId = restaurant.id
+                            finalRestaurantName = restaurant.name
                         } else {
-                            // ATOMICITY FAIL: Auth created, but Firestore user profile failed
                             _registrationState.value = Resource.Error(
-                                "Account created, but profile setup failed: ${dbResult.exceptionOrNull()?.message}"
+                                "Failed to set up restaurant: ${restaurantResult.exceptionOrNull()?.message}"
                             )
                             _statusMessage.value = ""
+                            return@launch
                         }
+                    }
+
+                    // 4. Prepare Profile Object
+                    val user = User(
+                        uid = firebaseUid!!,
+                        fullName = trimmedFullName,
+                        restaurantName = finalRestaurantName,
+                        restaurantId = finalRestaurantId,
+                        email = trimmedEmail,
+                        role = trimmedRole,
+                        createdAt = Timestamp.now()
+                    )
+
+                    // 5. Save to Firestore
+                    _statusMessage.value = "Finalizing user profile..."
+                    val dbResult = withContext(Dispatchers.IO) {
+                        userRepository.saveUserProfile(firebaseUid!!, user)
+                    }
+
+                    if (dbResult.isSuccess) {
+                        _statusMessage.value = "Registration complete!"
+                        _registrationState.value = Resource.Success(Unit)
                     } else {
-                        _registrationState.value = Resource.Error("Account created but failed to retrieve user info")
+                        _registrationState.value = Resource.Error(
+                            "Profile setup failed: ${dbResult.exceptionOrNull()?.message}"
+                        )
                         _statusMessage.value = ""
                     }
                 } else {
-                    val errorMessage = authResult.exceptionOrNull()?.message ?: "Registration failed"
-                    _registrationState.value = Resource.Error(errorMessage)
+                    _registrationState.value = Resource.Error("Failed to retrieve user identifier")
                     _statusMessage.value = ""
                 }
             } catch (e: Exception) {
