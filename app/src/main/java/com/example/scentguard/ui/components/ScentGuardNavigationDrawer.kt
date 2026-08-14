@@ -18,12 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.scentguard.R
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 
 @Composable
 fun ScentGuardNavigationDrawer(
-    user: User?,
+    user: UserProfile?,
     currentRoute: String?,
     drawerState: DrawerState,
     onNavigate: (String) -> Unit, // Changed from Screen to String for flexibility
@@ -132,7 +132,7 @@ fun ScentGuardNavigationDrawer(
                     onClick = { onNavigate(Screen.History.route) }
                 )
                 
-                if (user?.role == "Manager") {
+                if (user?.role?.uppercase() == "MANAGER") {
                     DrawerItem(
                         label = "Staff",
                         icon = Icons.Outlined.People,

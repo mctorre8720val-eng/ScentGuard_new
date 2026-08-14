@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +27,7 @@ import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.ReportViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +35,7 @@ import kotlinx.coroutines.launch
 fun DevicesScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    reportViewModel: ReportViewModel = viewModel()
+    reportViewModel: ReportViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data

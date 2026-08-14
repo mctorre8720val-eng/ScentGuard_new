@@ -12,10 +12,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.NotificationItem
@@ -23,9 +24,12 @@ import com.example.scentguard.data.model.NotificationType
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.NotificationViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -35,13 +39,12 @@ import java.util.*
 fun NotificationsScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: NotificationViewModel = viewModel()
+    viewModel: NotificationViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
     val notificationsState by viewModel.notificationsState.collectAsState()
-    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -71,10 +74,9 @@ fun NotificationsScreen(
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                "Notifications",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-1).sp
+                                "Alerts",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -97,9 +99,7 @@ fun NotificationsScreen(
                 Box(modifier = Modifier.padding(padding)) {
                     when (val state = notificationsState) {
                         is Resource.Loading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
+                            NotificationSkeletonList()
                         }
                         is Resource.Success -> {
                             NotificationList(state.data ?: emptyList())
@@ -119,7 +119,6 @@ fun NotificationsScreen(
                 }
             }
 
-            // The Floating Nav
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Notifications.route,
@@ -139,20 +138,29 @@ fun NotificationsScreen(
 fun NotificationList(items: List<NotificationItem>) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No notifications", style = MaterialTheme.typography.bodyLarge)
+            Text("No new alerts", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(items) { item ->
                 NotificationCard(item)
             }
             item {
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(112.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun NotificationSkeletonList() {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        repeat(4) {
+            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(24.dp)).shimmerEffect())
         }
     }
 }
@@ -161,7 +169,7 @@ fun NotificationList(items: List<NotificationItem>) {
 fun NotificationCard(item: NotificationItem) {
     val color = when (item.type) {
         NotificationType.ALERT -> MaterialTheme.colorScheme.error
-        NotificationType.WARNING -> Color(0xFFF57C00) // Orange
+        NotificationType.WARNING -> WarningOrange
         NotificationType.SYSTEM -> MaterialTheme.colorScheme.primary
     }
 
@@ -173,22 +181,22 @@ fun NotificationCard(item: NotificationItem) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = if (item.isRead) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
-        tonalElevation = if (item.isRead) 1.dp else 4.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f)),
+        shadowElevation = if (item.isRead) 1.dp else 4.dp
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.Top
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                color = color.copy(alpha = 0.1f),
+                modifier = Modifier.size(44.dp),
+                color = color.copy(alpha = 0.05f),
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                    Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
                 }
             }
             
@@ -196,18 +204,18 @@ fun NotificationCard(item: NotificationItem) {
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = item.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(text = item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     if (!item.isRead) {
                         Spacer(modifier = Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                        Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
                     }
                 }
                 Text(text = item.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(item.timestamp.toDate()),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(top = 4.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 6.dp)
                 )
             }
         }

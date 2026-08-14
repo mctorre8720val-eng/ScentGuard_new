@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,13 +17,14 @@ import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.ForgotPasswordViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(
     navController: NavHostController,
-    viewModel: ForgotPasswordViewModel = viewModel()
+    viewModel: ForgotPasswordViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     var email by remember { mutableStateOf("") }
     val resetState by viewModel.resetState.collectAsState()

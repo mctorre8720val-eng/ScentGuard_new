@@ -11,33 +11,40 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.Restaurant
+import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.StaffViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    staffViewModel: StaffViewModel = viewModel()
+    staffViewModel: StaffViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    // Security check: Only Managers can access Staff Management
-    if (user != null && user.role != "Manager") {
+    if (user != null && user.role.uppercase() != "MANAGER") {
         LaunchedEffect(Unit) {
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Dashboard.route) { inclusive = true }
@@ -47,15 +54,58 @@ fun StaffScreen(
 
     val staffState by staffViewModel.staffList.collectAsState()
     val restaurantState by staffViewModel.restaurantInfo.collectAsState()
+    val isRefreshing by staffViewModel.isRefreshingCode.collectAsState()
+    val removalState by staffViewModel.removalState.collectAsState()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var userToRemove by remember { mutableStateOf<UserProfile?>(null) }
 
     LaunchedEffect(user?.restaurantId) {
         user?.restaurantId?.let { 
             staffViewModel.fetchStaff(it)
             staffViewModel.fetchRestaurantInfo(it)
         }
+    }
+
+    LaunchedEffect(removalState) {
+        if (removalState is Resource.Success) {
+            snackbarHostState.showSnackbar("Staff member removed successfully")
+            staffViewModel.resetRemovalState()
+        } else if (removalState is Resource.Error) {
+            snackbarHostState.showSnackbar(removalState.message ?: "Failed to remove staff")
+            staffViewModel.resetRemovalState()
+        }
+    }
+
+    if (userToRemove != null) {
+        AlertDialog(
+            onDismissRequest = { userToRemove = null },
+            title = { Text("Remove Staff Member", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to remove \${userToRemove?.fullName}? They will immediately lose access to this restaurant's data.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        user?.restaurantId?.let { rid -> 
+                            staffViewModel.removeStaff(userToRemove!!.uid, rid)
+                        }
+                        userToRemove = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Remove", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToRemove = null }) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 
     ScentGuardNavigationDrawer(
@@ -80,9 +130,16 @@ fun StaffScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
                 topBar = {
                     CenterAlignedTopAppBar(
-                        title = { Text("Restaurant Staff") },
+                        title = {
+                            Text(
+                                "Staff Management",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Outlined.Menu, contentDescription = "Menu")
@@ -94,14 +151,27 @@ fun StaffScreen(
             ) { padding ->
                 Column(modifier = Modifier.padding(padding).fillMaxSize()) {
                     
-                    // Invitation Code Section
-                    (restaurantState as? Resource.Success)?.data?.let { restaurant ->
-                        InviteCodeCard(restaurant.inviteCode)
+                    val restaurant = (restaurantState as? Resource.Success)?.data
+                    if (restaurant != null) {
+                        InviteCodeCard(
+                            restaurant = restaurant,
+                            isRefreshing = isRefreshing,
+                            onRefresh = { staffViewModel.refreshInviteCode(restaurant.id) }
+                        )
                     }
+
+                    Text(
+                        "Current Staff",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    )
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (val state = staffState) {
-                            is Resource.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                            is Resource.Loading -> {
+                                StaffSkeletonList()
+                            }
                             is Resource.Success -> {
                                 val staffList = state.data ?: emptyList()
                                 if (staffList.isEmpty()) {
@@ -109,9 +179,7 @@ fun StaffScreen(
                                 } else {
                                     StaffList(
                                         staff = staffList,
-                                        onRemove = { staffUid -> 
-                                            user?.restaurantId?.let { staffViewModel.removeStaff(staffUid, it) }
-                                        }
+                                        onRemove = { member -> userToRemove = member }
                                     )
                                 }
                             }
@@ -142,58 +210,114 @@ fun StaffScreen(
 }
 
 @Composable
-fun InviteCodeCard(code: String) {
+fun InviteCodeCard(
+    restaurant: Restaurant,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit
+) {
+    val expiry = restaurant.inviteCodeExpiresAt?.toDate()
+    val isExpired = expiry != null && expiry.before(java.util.Date())
+    
+    val timeRemaining = if (expiry != null && !isExpired) {
+        val diff = expiry.time - System.currentTimeMillis()
+        val hours = TimeUnit.MILLISECONDS.toHours(diff)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(diff) % 60
+        String.format("%02dh %02dm", hours, minutes)
+    } else {
+        "Expired"
+    }
+
     Surface(
         modifier = Modifier.padding(24.dp).fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
     ) {
-        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "Staff Invitation Code",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
-            Text(
-                code,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            
             Spacer(Modifier.height(8.dp))
-            Text(
-                "Share this code with your employees to link them to this restaurant.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    restaurant.inviteCode,
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 4.sp,
+                    color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(Modifier.height(12.dp))
+            
+            Surface(
+                color = (if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary).copy(alpha = 0.1f),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = if (isExpired) "Code Expired" else "Expires in: \${timeRemaining}",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(Modifier.height(24.dp))
+            
+            Button(
+                onClick = onRefresh,
+                enabled = !isRefreshing,
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                } else {
+                    Icon(Icons.Outlined.Refresh, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Generate New Code", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
 
 @Composable
-fun StaffList(staff: List<User>, onRemove: (String) -> Unit) {
+fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(staff) { member ->
             StaffCard(member, onRemove)
         }
-        item { Spacer(modifier = Modifier.height(100.dp)) }
+        item { Spacer(modifier = Modifier.height(112.dp)) }
     }
 }
 
 @Composable
-fun StaffCard(member: User, onRemove: (String) -> Unit) {
+fun StaffSkeletonList() {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        repeat(3) {
+            Box(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(24.dp)).shimmerEffect())
+        }
+    }
+}
+
+@Composable
+fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -201,24 +325,25 @@ fun StaffCard(member: User, onRemove: (String) -> Unit) {
         ) {
             Surface(
                 modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         member.fullName.take(1).uppercase(),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(member.fullName, style = MaterialTheme.typography.titleMedium)
-                Text(member.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(member.fullName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(member.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { onRemove(member.uid) }) {
-                Icon(Icons.Outlined.PersonRemove, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+            IconButton(onClick = { onRemove(member) }) {
+                Icon(Icons.Outlined.PersonRemove, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
             }
         }
     }
@@ -228,9 +353,9 @@ fun StaffCard(member: User, onRemove: (String) -> Unit) {
 fun EmptyStaffState() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Outlined.People, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
-            Text("No staff members yet", style = MaterialTheme.typography.titleMedium)
-            Text("Share your invite code to add staff", style = MaterialTheme.typography.bodySmall)
+            Icon(Icons.Outlined.People, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            Text("No staff members yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Share your invite code to add staff", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }

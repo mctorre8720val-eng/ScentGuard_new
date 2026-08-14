@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class ReportViewModel(
-    private val reportRepository: ReportRepository = ReportRepository(),
-    private val chartRepository: ChartRepository = ChartRepository()
+    private val reportRepository: ReportRepository,
+    private val chartRepository: ChartRepository
 ) : ViewModel() {
 
     private val _reportState = MutableStateFlow<Resource<ReportSummary>>(Resource.Idle())

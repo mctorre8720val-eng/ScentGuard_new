@@ -3,12 +3,15 @@ package com.example.scentguard.ui.components
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.scentguard.utils.pressClickEffect
 
 @Composable
 fun ScentGuardButton(
@@ -18,16 +21,28 @@ fun ScentGuardButton(
     enabled: Boolean = true,
     isLoading: Boolean = false
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Button(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(56.dp)
+            .pressClickEffect(),
         enabled = enabled && !isLoading,
-        shape = RoundedCornerShape(16.dp),
+        shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            disabledContentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
         )
     ) {
         if (isLoading) {
@@ -39,7 +54,7 @@ fun ScentGuardButton(
         } else {
             Text(
                 text = text,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
         }

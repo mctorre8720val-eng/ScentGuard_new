@@ -22,42 +22,37 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 
 @Composable
 fun ScentGuardFloatingNav(
-    user: User?,
+    user: UserProfile?,
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    // Fill max size to allow alignment to bottom center of the screen
     Box(
         modifier = Modifier
             .fillMaxSize()
             .navigationBarsPadding()
-            .padding(bottom = 16.dp), // Added margin from the bottom of the screen
+            .padding(bottom = 24.dp), // Optimized Thumb Zone
         contentAlignment = Alignment.BottomCenter
     ) {
         Surface(
             modifier = Modifier
                 .height(72.dp)
-                .widthIn(max = 420.dp)
-                .padding(horizontal = 16.dp),
-            // Glassmorphism: Semi-transparent surface with high tonal elevation
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                .widthIn(max = 400.dp)
+                .padding(horizontal = 24.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             shape = CircleShape,
-            tonalElevation = 12.dp,
-            shadowElevation = 16.dp,
+            shadowElevation = 8.dp,
             border = androidx.compose.foundation.BorderStroke(
                 width = 0.5.dp,
-                color = Color.White.copy(alpha = 0.2f)
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
             )
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -81,8 +76,6 @@ fun ScentGuardFloatingNav(
 
                 NavItem(
                     label = "Alerts",
-
-
                     route = Screen.Notifications.route,
                     icon = Icons.Outlined.Notifications,
                     selected = currentRoute == Screen.Notifications.route,
@@ -108,12 +101,8 @@ private fun NavItem(
     selected: Boolean,
     onNavigate: (String) -> Unit
 ) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
-        label = "bg"
-    )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         label = "content"
     )
     val iconSize by animateDpAsState(
@@ -123,10 +112,8 @@ private fun NavItem(
 
     Box(
         modifier = Modifier
-            .height(56.dp)
-            .width(64.dp)
+            .size(56.dp)
             .clip(CircleShape)
-            .background(backgroundColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -134,21 +121,11 @@ private fun NavItem(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(iconSize),
-                tint = contentColor
-            )
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 2.dp)
-                        .size(4.dp)
-                        .background(contentColor, CircleShape)
-                )
-            }
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(iconSize),
+            tint = contentColor
+        )
     }
 }

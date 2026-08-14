@@ -1,6 +1,5 @@
 package com.example.scentguard.ui.screens.history
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,11 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.HistoryItem
@@ -25,8 +25,10 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.HistoryViewModel
 import com.example.scentguard.viewmodel.MainViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,12 +38,11 @@ import java.util.*
 fun HistoryScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: HistoryViewModel = viewModel()
+    viewModel: HistoryViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    // Security check: Only Managers can access History
     if (user != null && user.role != "Manager") {
         LaunchedEffect(Unit) {
             navController.navigate(Screen.Dashboard.route) {
@@ -51,7 +52,6 @@ fun HistoryScreen(
     }
 
     val historyState by viewModel.historyState.collectAsState()
-    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -81,8 +81,9 @@ fun HistoryScreen(
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                "System History",
-                                style = MaterialTheme.typography.titleLarge
+                                "System logs",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -105,22 +106,25 @@ fun HistoryScreen(
                 var searchQuery by remember { mutableStateOf("") }
                 
                 Column(modifier = Modifier.padding(padding)) {
-                    // Search Bar
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
                         placeholder = { Text("Search logs...") },
-                        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
+                        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = MaterialTheme.colorScheme.primary) },
+                        shape = RoundedCornerShape(20.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                        )
                     )
 
                     when (val state = historyState) {
                         is Resource.Loading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
+                            HistorySkeletonList()
                         }
                         is Resource.Success -> {
                             val filteredItems = state.data?.filter { 
@@ -144,7 +148,6 @@ fun HistoryScreen(
                 }
             }
 
-            // The Floating Nav
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.History.route,
@@ -164,13 +167,13 @@ fun HistoryScreen(
 fun HistoryList(items: List<HistoryItem>) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No history found", style = MaterialTheme.typography.bodyLarge)
+            Text("No logs found", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(items) { item ->
                 HistoryCard(item)
@@ -183,12 +186,41 @@ fun HistoryList(items: List<HistoryItem>) {
 }
 
 @Composable
+fun HistorySkeletonList() {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        userScrollEnabled = false
+    ) {
+        items(5) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(44.dp).clip(CircleShape).shimmerEffect())
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.width(120.dp).height(20.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(modifier = Modifier.width(200.dp).height(16.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun HistoryCard(item: HistoryItem) {
     val color = when (item.type) {
         HistoryType.INFO -> MaterialTheme.colorScheme.primary
-        HistoryType.WARNING -> Color(0xFFF57C00) // Orange
+        HistoryType.WARNING -> Color(0xFFFF9500)
         HistoryType.ALERT -> MaterialTheme.colorScheme.error
-        HistoryType.SUCCESS -> Color(0xFF388E3C) // Green
+        HistoryType.SUCCESS -> Color(0xFF34C759)
     }
 
     val icon = when (item.type) {
@@ -200,22 +232,22 @@ fun HistoryCard(item: HistoryItem) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(48.dp),
-                color = color.copy(alpha = 0.1f),
+                modifier = Modifier.size(44.dp),
+                color = color.copy(alpha = 0.05f),
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                    Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
                 }
             }
             
@@ -223,11 +255,11 @@ fun HistoryCard(item: HistoryItem) {
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = item.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(item.timestamp.toDate()),
+                    text = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(item.timestamp.toDate()),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }

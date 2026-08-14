@@ -1,17 +1,23 @@
 package com.example.scentguard.ui.screens.reports
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,9 +29,14 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardChart
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.ui.theme.ErrorRed
+import com.example.scentguard.ui.theme.PremiumGreen
+import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.ReportViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,13 +44,13 @@ import kotlinx.coroutines.launch
 fun ReportsScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: ReportViewModel = viewModel()
+    viewModel: ReportViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
     // Security check: Only Managers can access Reports
-    if (user != null && user.role != "Manager") {
+    if (user != null && user.role.uppercase() != "MANAGER") {
         LaunchedEffect(Unit) {
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Dashboard.route) { inclusive = true }
@@ -81,7 +92,8 @@ fun ReportsScreen(
                         title = {
                             Text(
                                 "Analytics",
-                                style = MaterialTheme.typography.titleLarge
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -101,35 +113,56 @@ fun ReportsScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    TabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = Color.Transparent,
-                        divider = {}
+                    Surface(
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
+                        shape = CircleShape,
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
                     ) {
-                        Tab(
-                            selected = selectedTab == 0,
-                            onClick = { 
-                                selectedTab = 0 
-                                viewModel.fetchDailyReport()
-                            },
-                            text = { Text("Daily") }
-                        )
-                        Tab(
-                            selected = selectedTab == 1,
-                            onClick = { 
-                                selectedTab = 1 
-                                viewModel.fetchWeeklyReport()
-                            },
-                            text = { Text("Weekly") }
-                        )
+                        TabRow(
+                            selectedTabIndex = selectedTab,
+                            containerColor = Color.Transparent,
+                            divider = {},
+                            indicator = { tabPositions ->
+                                if (selectedTab < tabPositions.size) {
+                                    Box(
+                                        Modifier
+                                            .tabIndicatorOffset(tabPositions[selectedTab])
+                                            .fillMaxHeight()
+                                            .padding(4.dp)
+                                            .background(MaterialTheme.colorScheme.surface, CircleShape)
+                                            .shadow(2.dp, CircleShape)
+                                    )
+                                }
+                            }
+                        ) {
+                            Tab(
+                                selected = selectedTab == 0,
+                                onClick = { 
+                                    selectedTab = 0 
+                                    viewModel.fetchDailyReport()
+                                },
+                                text = { Text("Daily", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { 
+                                    selectedTab = 1 
+                                    viewModel.fetchWeeklyReport()
+                                },
+                                text = { Text("Weekly", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (val state = reportState) {
                             is Resource.Loading -> {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
+                                ReportSkeleton()
                             }
                             is Resource.Success -> {
                                 ReportContent(state.data!!, chartState)
@@ -145,7 +178,6 @@ fun ReportsScreen(
                 }
             }
 
-            // The Floating Nav
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Reports.route,
@@ -169,23 +201,24 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
-        // Main Score Card
         ScoreCard(report.airQualityScore)
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
-        // Chart Section
+        Text(text = "Air quality trend", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
-            Box(modifier = Modifier.padding(16.dp)) {
+            Box(modifier = Modifier.padding(24.dp)) {
                 when (chartState) {
-                    is Resource.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().height(200.dp).shimmerEffect())
                     is Resource.Success -> ScentGuardChart(chartState.data!!)
                     is Resource.Error -> Text("Failed to load chart", color = MaterialTheme.colorScheme.error)
                     else -> {}
@@ -193,16 +226,15 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
-        Text(text = "Summary (${report.period})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Insights summary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
         
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            ReportMetricItem("Average Gas", report.avgGasLevel, Icons.Outlined.Cloud, MaterialTheme.colorScheme.primary)
-            ReportMetricItem("Fan Runtime", report.totalFanRuntime, Icons.Outlined.Timer, Color(0xFFF57C00))
-            ReportMetricItem("Total Alerts", report.alertsCount.toString(), Icons.Outlined.Warning, MaterialTheme.colorScheme.error)
+            ReportMetricItem("Average Gas", report.avgGasLevel, Icons.Outlined.Cloud, PremiumGreen)
+            ReportMetricItem("Fan Runtime", report.totalFanRuntime, Icons.Outlined.Timer, WarningOrange)
+            ReportMetricItem("Total Alerts", report.alertsCount.toString(), Icons.Outlined.Warning, ErrorRed)
         }
         
         Spacer(modifier = Modifier.height(120.dp))
@@ -210,34 +242,47 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
 }
 
 @Composable
+fun ReportSkeleton() {
+    Column(modifier = Modifier.padding(24.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(32.dp)).shimmerEffect())
+        Spacer(modifier = Modifier.height(40.dp))
+        Box(modifier = Modifier.width(180.dp).height(24.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+        Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(32.dp)).shimmerEffect())
+    }
+}
+
+@Composable
 fun ScoreCard(score: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
     ) {
         Row(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Air Quality Score", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                Text("Performance Index", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Text(
-                    text = if (score > 90) "Excellent" else "Good",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    text = if (score > 90) "Excellent" else "Stabilizing",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     progress = { score / 100f },
-                    modifier = Modifier.size(80.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(84.dp),
+                    color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 8.dp,
-                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
-                Text(text = "$score", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(text = "$score", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -247,26 +292,26 @@ fun ScoreCard(score: Int) {
 fun ReportMetricItem(label: String, value: String, icon: ImageVector, color: Color) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                color = color.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.size(44.dp),
+                color = color.copy(alpha = 0.05f),
+                shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                    Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
         }
     }
 }

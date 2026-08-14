@@ -3,8 +3,9 @@ package com.example.scentguard.ui.screens.signup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -12,14 +13,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,6 +32,7 @@ import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.RegistrationViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,17 +40,17 @@ import kotlinx.coroutines.delay
 fun SignUpScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: RegistrationViewModel = viewModel()
+    viewModel: RegistrationViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Manager, 1: Staff
+    
     var fullName by remember { mutableStateOf("") }
     var restaurantInput by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("Staff") }
     
     var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
     
     val registrationState by viewModel.registrationState.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
@@ -58,7 +59,15 @@ fun SignUpScreen(
     val userProfile by mainViewModel.userProfile.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    val isCompleteProfileMode by mainViewModel.isUserAuthenticated.collectAsState()
+    val isUserAuth by mainViewModel.isUserAuthenticated.collectAsState()
+    val isCompleteProfileMode = isUserAuth
+
+    // Pre-fill email and handle session state
+    LaunchedEffect(isCompleteProfileMode, mainViewModel.currentUserEmail) {
+        if (isCompleteProfileMode) {
+            mainViewModel.currentUserEmail?.let { email = it }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.resetState()
@@ -66,28 +75,24 @@ fun SignUpScreen(
 
     LaunchedEffect(registrationState) {
         if (registrationState is Resource.Success) {
-            // Force refresh global profile to ensure we are "logged in" with data
             mainViewModel.fetchUserProfile()
-            
             snackbarHostState.showSnackbar(
-                message = if (isCompleteProfileMode) "Profile completed!" else "Account created successfully!",
+                message = if (isCompleteProfileMode) "Profile completed!" else "Success!",
                 duration = SnackbarDuration.Short
             )
         }
         
         if (registrationState is Resource.Error) {
             snackbarHostState.showSnackbar(
-                message = registrationState.message ?: "Registration failed",
-                duration = SnackbarDuration.Long,
-                actionLabel = "Retry"
+                message = registrationState.message ?: "Failed",
+                duration = SnackbarDuration.Long
             )
         }
     }
 
-    // Combined Navigation Logic - Watch for Profile to be ready
     LaunchedEffect(registrationState, onboardingCompleted, userProfile) {
         if (registrationState is Resource.Success && onboardingCompleted != null && userProfile is Resource.Success) {
-            delay(500) // Brief pause to allow Snackbar to be seen
+            delay(500)
             val destination = if (onboardingCompleted == true) Screen.Dashboard.route else Screen.Onboarding.route
             navController.navigate(destination) {
                 popUpTo(Screen.SignUp.route) { inclusive = true }
@@ -95,32 +100,21 @@ fun SignUpScreen(
         }
     }
 
-    ScentGuardBackground(showBloom = true) {
+    ScentGuardBackground {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                // Background Detail
-                Image(
-                    painter = painterResource(id = R.drawable.ic_abstract_air_waves),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .alpha(0.1f),
-                    alignment = Alignment.TopCenter
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(64.dp))
                     
                     Image(
                         painter = painterResource(id = R.drawable.ic_scentguard_logo_vector),
@@ -128,103 +122,113 @@ fun SignUpScreen(
                         modifier = Modifier.size(64.dp)
                     )
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Text(
-                        text = if (isCompleteProfileMode) "Complete Profile" else "Create Account",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = if (isCompleteProfileMode) "Finalize profile" else "Register",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold
                     )
                     
                     Text(
-                        text = if (isCompleteProfileMode) "Finish setting up your workspace" else "Join ScentGuard for a fresher workspace",
+                        text = if (isCompleteProfileMode) "Finish setting up your workspace" else "Join the ScentGuard network",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 40.dp)
+                        modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
                     )
+
+                    if (!isCompleteProfileMode) {
+                        TabRow(
+                            selectedTabIndex = selectedTab,
+                            containerColor = Color.Transparent,
+                            divider = {},
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        ) {
+                            Tab(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                text = { Text("Manager") }
+                            )
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                text = { Text("Staff") }
+                            )
+                        }
+                    }
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 32.dp,
-                        contentPadding = 32.dp
+                        contentPadding = 24.dp
                     ) {
                         OutlinedTextField(
                             value = fullName,
                             onValueChange = { fullName = it },
-                            label = { Text("Full Name") },
+                            label = { Text("Full name") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                             )
                         )
                         
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         
                         OutlinedTextField(
                             value = restaurantInput,
                             onValueChange = { restaurantInput = it },
                             label = { 
-                                Text(if (role == "Manager") "Restaurant Name" else "Invitation Code") 
+                                Text(if (selectedTab == 0) "Restaurant name" else "Invitation code") 
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                             ),
                             placeholder = {
-                                if (role == "Staff") Text("Enter 6-digit code")
+                                if (selectedTab == 1) Text("Enter 6-digit code")
                             }
                         )
                         
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email Address") },
+                            label = { Text("Email") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(16.dp),
                             singleLine = true,
-                            enabled = !isCompleteProfileMode,
+                            readOnly = isCompleteProfileMode,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 autoCorrectEnabled = false
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                             )
                         )
                         
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        Text(
-                            text = "Select your role",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            RadioButton(selected = role == "Manager", onClick = { role = "Manager" })
-                            Text("Manager", style = MaterialTheme.typography.bodyMedium)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            RadioButton(selected = role == "Staff", onClick = { role = "Staff" })
-                            Text("Staff", style = MaterialTheme.typography.bodyMedium)
+                        if (isCompleteProfileMode) {
+                            TextButton(
+                                onClick = { 
+                                    mainViewModel.logout()
+                                    email = ""
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Not you? Sign out", style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
                         if (!isCompleteProfileMode) {
+                            Spacer(modifier = Modifier.height(20.dp))
                             OutlinedTextField(
                                 value = password,
                                 onValueChange = { password = it },
@@ -237,73 +241,52 @@ fun SignUpScreen(
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                                 )
                             )
                             
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
+                            Spacer(modifier = Modifier.height(20.dp))
                             OutlinedTextField(
                                 value = confirmPassword,
                                 onValueChange = { confirmPassword = it },
-                                label = { Text("Confirm Password") },
-                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                                        Icon(imageVector = image, contentDescription = null)
-                                    }
-                                },
+                                label = { Text("Confirm password") },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                                 )
                             )
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
                         }
 
+                        Spacer(modifier = Modifier.height(32.dp))
+
                         if (registrationState is Resource.Loading) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                                 LinearProgressIndicator(
                                     modifier = Modifier.fillMaxWidth(),
                                     color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.primaryContainer
+                                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                 )
                                 Text(
                                     text = statusMessage,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                    textAlign = TextAlign.Center
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(top = 8.dp)
                                 )
                             }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
                         ScentGuardButton(
-                            text = if (isCompleteProfileMode) "Finalize Setup" else "Create Account",
+                            text = if (isCompleteProfileMode) "Finalize Setup" else if (selectedTab == 0) "Create Restaurant" else "Join Restaurant",
                             onClick = { 
-                                // In complete profile mode, we pass a dummy password since it's not used
-                                viewModel.register(
-                                    fullName, 
-                                    restaurantInput, 
-                                    email, 
-                                    role, 
-                                    if (isCompleteProfileMode) "DUMMY_PWD" else password, 
-                                    if (isCompleteProfileMode) "DUMMY_PWD" else confirmPassword
-                                ) 
+                                val role = if (selectedTab == 0) "Manager" else "Staff"
+                                viewModel.register(fullName, restaurantInput, email, role, password, confirmPassword) 
                             },
                             isLoading = registrationState is Resource.Loading
                         )
@@ -311,32 +294,21 @@ fun SignUpScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    if (!isCompleteProfileMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Have an account? ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         TextButton(onClick = { navController.popBackStack() }) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Already have an account? ",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Sign In",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    } else {
-                        TextButton(onClick = { 
-                            mainViewModel.logout()
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(Screen.SignUp.route) { inclusive = true }
-                            }
-                        }) {
                             Text(
-                                text = "Use different account",
+                                text = "Sign in",
                                 style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }

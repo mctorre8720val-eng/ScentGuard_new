@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LoginViewModel(
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val TAG = "LoginViewModel"
@@ -24,7 +24,7 @@ class LoginViewModel(
     fun login(email: String, password: String) {
         val trimmedEmail = email.trim()
         
-        Log.d(TAG, "Attempting login for email: ${trimmedEmail.take(3)}***")
+        Log.d(TAG, "Attempting login for email: \${trimmedEmail.take(3)}***")
 
         if (trimmedEmail.isBlank() || password.isBlank()) {
             _loginState.value = Resource.Error("Fields cannot be empty")
@@ -32,7 +32,7 @@ class LoginViewModel(
         }
 
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            Log.w(TAG, "Validation failed: Invalid email format for '${trimmedEmail.take(3)}***'")
+            Log.w(TAG, "Validation failed: Invalid email format for '\${trimmedEmail.take(3)}***'")
             _loginState.value = Resource.Error("Please enter a valid email address")
             return
         }
@@ -43,11 +43,25 @@ class LoginViewModel(
                 authRepository.login(trimmedEmail, password)
             }
             result.onSuccess {
-                Log.d(TAG, "Login success for ${trimmedEmail.take(3)}***")
+                Log.d(TAG, "Login success for \${trimmedEmail.take(3)}***")
                 _loginState.value = Resource.Success(it!!)
             }.onFailure {
-                Log.e(TAG, "Login failed for ${trimmedEmail.take(3)}***", it)
+                Log.e(TAG, "Login failed for \${trimmedEmail.take(3)}***", it)
                 _loginState.value = Resource.Error(it.message ?: "Login failed")
+            }
+        }
+    }
+
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _loginState.value = Resource.Loading()
+            val result = withContext(Dispatchers.IO) {
+                authRepository.signInWithGoogle(idToken)
+            }
+            result.onSuccess {
+                _loginState.value = Resource.Success(it!!)
+            }.onFailure {
+                _loginState.value = Resource.Error(it.message ?: "Google Sign-In failed")
             }
         }
     }

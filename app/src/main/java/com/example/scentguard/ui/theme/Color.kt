@@ -2,36 +2,26 @@ package com.example.scentguard.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Palette
-val GreenPrimary = Color(0xFF006D3B)
-val OnGreenPrimary = Color(0xFFFFFFFF)
-val GreenPrimaryContainer = Color(0xFF99F6B4)
-val OnGreenPrimaryContainer = Color(0xFF00210E)
+// --- Premium 60/30/10 Palette ---
 
-val GreenSecondary = Color(0xFF4F6354)
-val OnGreenSecondary = Color(0xFFFFFFFF)
-val GreenSecondaryContainer = Color(0xFFD2E8D5)
-val OnGreenSecondaryContainer = Color(0xFF0C1F13)
+// Neutral (60%): Backgrounds and large surfaces
+val SurfaceWhite = Color(0xFFFFFFFF)
+val BaseGray = Color(0xFFF8F9FA)
+val NeutralText = Color(0xFF1A1C1E)
+val SubtitleText = Color(0xFF6C757D)
 
-val BlueTertiary = Color(0xFF3B6470)
-val OnBlueTertiary = Color(0xFFFFFFFF)
-val BlueTertiaryContainer = Color(0xFFBFEAF7)
-val OnBlueTertiaryContainer = Color(0xFF001F26)
+// Complementary (30%): Soft tints and secondary elements
+val GreenSoft = Color(0xFFE8F5E9)
+val GreenMuted = Color(0xFFA5D6A7)
+val SecondaryAction = Color(0xFFF1F3F5)
 
-val ErrorRed = Color(0xFFBA1A1A)
-val OnErrorRed = Color(0xFFFFFFFF)
+// Accent (10%): High-impact primary actions and indicators
+val PremiumGreen = Color(0xFF34C759) // iOS-style Vibrant Green
+val WarningOrange = Color(0xFFFF9500)
+val ErrorRed = Color(0xFFFF3B30)
 
-val Neutral99 = Color(0xFFFBFDF8)
-val Neutral90 = Color(0xFFE1E3DF)
-val NeutralVariant30 = Color(0xFF414942)
-
-// Dark Theme Palette
-val GreenPrimaryDark = Color(0xFF7DD99A)
-val OnGreenPrimaryDark = Color(0xFF00391C)
-val GreenPrimaryContainerDark = Color(0xFF00522B)
-
-val GreenSecondaryDark = Color(0xFFB6CCBA)
-val OnGreenSecondaryDark = Color(0xFF223528)
-
-val BlueTertiaryDark = Color(0xFFA3CDDB)
-val OnBlueTertiaryDark = Color(0xFF033540)
+// --- Dark Theme Palette (Midnight Minimal) ---
+val DarkBackground = Color(0xFF000000)
+val DarkSurface = Color(0xFF1C1C1E)
+val DarkText = Color(0xFFF8F9FA)
+val DarkGreenAccent = Color(0xFF30D158)

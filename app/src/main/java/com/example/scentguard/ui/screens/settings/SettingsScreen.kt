@@ -3,6 +3,7 @@ package com.example.scentguard.ui.screens.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,6 +26,7 @@ import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +34,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
@@ -48,7 +51,7 @@ fun SettingsScreen(
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Choose Theme") },
+            title = { Text("App Theme", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     ThemeOption("System Default", themeMode == "system") { viewModel.setThemeMode("system"); showThemeDialog = false }
@@ -56,9 +59,12 @@ fun SettingsScreen(
                     ThemeOption("Dark", themeMode == "dark") { viewModel.setThemeMode("dark"); showThemeDialog = false }
                 }
             },
-            confirmButton = {
+            confirmButton = {},
+            dismissButton = {
                 TextButton(onClick = { showThemeDialog = false }) { Text("Cancel") }
-            }
+            },
+            shape = RoundedCornerShape(32.dp),
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -89,9 +95,8 @@ fun SettingsScreen(
                         title = {
                             Text(
                                 "Settings",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-1).sp
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -113,9 +118,9 @@ fun SettingsScreen(
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     
-                    Text(text = "Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    SectionTitle("Appearance")
                     SettingsCard {
                         ActionItem(
                             label = "App Theme",
@@ -125,43 +130,43 @@ fun SettingsScreen(
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    Text(text = "Notifications", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    SectionTitle("Notifications")
                     SettingsCard {
                         ToggleItem(
-                            label = "Gas Concentration Alerts",
-                            description = "Get notified when gas levels are high",
+                            label = "Air Quality Alerts",
+                            description = "Notify when levels are high",
                             icon = Icons.Outlined.Warning,
                             checked = gasAlerts,
                             onCheckedChange = { viewModel.toggleGasAlerts(it) }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
                         ToggleItem(
                             label = "Fan Activity",
-                            description = "Get notified when the fan is activated",
+                            description = "Notify when fan is active",
                             icon = Icons.Outlined.Air,
                             checked = fanAlerts,
                             onCheckedChange = { viewModel.toggleFanAlerts(it) }
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    Text(text = "System", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    SectionTitle("System")
                     SettingsCard {
                         ActionItem(
-                            label = "Sensor Calibration",
-                            description = "Last calibrated: 15 days ago",
+                            label = "Calibration",
+                            description = "Last sync: 15d ago",
                             icon = Icons.Outlined.SettingsSuggest,
-                            onClick = { /* Phase 4 */ }
+                            onClick = { }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
                         ActionItem(
-                            label = "About ScentGuard",
-                            description = "Version 1.0.0 (Phase 1 Final)",
+                            label = "About",
+                            description = "ScentGuard v1.1.0",
                             icon = Icons.Outlined.Info,
-                            onClick = { /* App Info */ }
+                            onClick = { }
                         )
                     }
 
@@ -169,7 +174,6 @@ fun SettingsScreen(
                 }
             }
 
-            // The Floating Nav
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Settings.route,
@@ -186,6 +190,16 @@ fun SettingsScreen(
 }
 
 @Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 12.dp)
+    )
+}
+
+@Composable
 fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 12.dp),
@@ -193,18 +207,17 @@ fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         RadioButton(selected = selected, onClick = onClick)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
 @Composable
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
     ) {
         Column(content = content)
     }
@@ -219,24 +232,34 @@ fun ToggleItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(12.dp)
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+            shape = CircleShape
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked, 
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                uncheckedBorderColor = Color.Transparent
+            )
+        )
     }
 }
 
@@ -252,24 +275,24 @@ fun ActionItem(
         color = Color.Transparent
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 modifier = Modifier.size(40.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge)
-                Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
         }
     }
 }

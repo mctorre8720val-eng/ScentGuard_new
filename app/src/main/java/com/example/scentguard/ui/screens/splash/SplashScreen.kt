@@ -4,8 +4,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,28 +48,47 @@ fun SplashScreen(
 
     val userProfile by mainViewModel.userProfile.collectAsState()
     val onboardingCompleted by mainViewModel.onboardingCompleted.collectAsState()
+    val isAuthenticated by mainViewModel.isUserAuthenticated.collectAsState()
 
     LaunchedEffect(Unit) {
         startAnimation = true
-        delay(2500) // Slightly longer to appreciate the new branding
+        delay(2500)
         isTimerFinished = true
+        
+        // Safety Rescue: If we are still on this screen after 6 seconds, force navigate to login
+        delay(3500)
+        if (navController.currentBackStackEntry?.destination?.route == Screen.Splash.route) {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        }
     }
 
-    LaunchedEffect(isTimerFinished, userProfile, onboardingCompleted) {
-        if (isTimerFinished && onboardingCompleted != null) {
-            when (userProfile) {
-                is Resource.Success -> {
-                    val destination = if (onboardingCompleted == true) Screen.Dashboard.route else Screen.Onboarding.route
-                    navController.navigate(destination) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+    LaunchedEffect(isTimerFinished, userProfile, onboardingCompleted, isAuthenticated) {
+        if (isTimerFinished) {
+            if (!isAuthenticated) {
+                // User is definitely not logged in - go to login
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
+                }
+            } else if (onboardingCompleted != null) {
+                // User is authenticated, wait for profile or error
+                when (userProfile) {
+                    is Resource.Success -> {
+                        val destination = if (onboardingCompleted == true) Screen.Dashboard.route else Screen.Onboarding.route
+                        navController.navigate(destination) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                    is Resource.Error -> {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                    else -> {
+                        // Keep waiting or let the 6s safety rescue take over
                     }
                 }
-                is Resource.Error -> {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                }
-                else -> {}
             }
         }
     }
@@ -77,13 +98,12 @@ fun SplashScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Subtle Air Waves in the background
             Image(
                 painter = painterResource(id = R.drawable.ic_abstract_air_waves),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(0.5f),
+                    .alpha(0.3f),
                 alignment = Alignment.TopCenter
             )
 
@@ -91,7 +111,6 @@ fun SplashScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(24.dp)
             ) {
-                // The New Vector Logo
                 Image(
                     painter = painterResource(id = R.drawable.ic_scentguard_logo_vector),
                     contentDescription = "ScentGuard Logo",
@@ -112,40 +131,28 @@ fun SplashScreen(
                     modifier = Modifier.alpha(alphaAnim)
                 )
                 
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .alpha(alphaAnim)
-                ) {
-                    Text(
-                        text = "VENT",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 2.sp
-                    )
-                }
+                Text(
+                    text = "Smart Air Management",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    letterSpacing = 2.sp,
+                    modifier = Modifier.alpha(alphaAnim)
+                )
 
                 Spacer(modifier = Modifier.height(64.dp))
-
-                Text(
-                    text = "Smart Air Quality Monitoring\nfor Restaurant Waste Storage",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 24.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(top = 24.dp)
-                        .alpha(alphaAnim)
-                )
+                
+                // Show a subtle loading indicator if we are authenticated but waiting for data
+                if (isTimerFinished && isAuthenticated && userProfile is Resource.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                    )
+                }
             }
             
-            // Version Label at the bottom
             Text(
-                text = "Version 1.0.0",
+                text = "Version 1.1.0",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier
@@ -154,21 +161,5 @@ fun SplashScreen(
                     .alpha(alphaAnim * 0.5f)
             )
         }
-    }
-}
-
-@Composable
-private fun Surface(
-    color: androidx.compose.ui.graphics.Color,
-    shape: androidx.compose.ui.graphics.Shape,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.material3.Surface(
-        color = color,
-        shape = shape,
-        modifier = modifier
-    ) {
-        content()
     }
 }

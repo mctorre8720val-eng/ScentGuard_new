@@ -1,70 +1,59 @@
 package com.example.scentguard.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = GreenPrimaryDark,
-    onPrimary = OnGreenPrimaryDark,
-    primaryContainer = GreenPrimaryContainerDark,
-    secondary = GreenSecondaryDark,
-    onSecondary = OnGreenSecondaryDark,
-    tertiary = BlueTertiaryDark,
-    onTertiary = OnBlueTertiaryDark,
+    primary = DarkGreenAccent,
+    onPrimary = SurfaceWhite,
+    background = DarkBackground,
+    onBackground = DarkText,
+    surface = DarkSurface,
+    onSurface = DarkText,
+    surfaceVariant = DarkSurface,
+    onSurfaceVariant = SubtitleText,
     error = ErrorRed,
-    onError = OnErrorRed
+    outline = DarkSurface
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = GreenPrimary,
-    onPrimary = OnGreenPrimary,
-    primaryContainer = GreenPrimaryContainer,
-    onPrimaryContainer = OnGreenPrimaryContainer,
-    secondary = GreenSecondary,
-    onSecondary = OnGreenSecondary,
-    secondaryContainer = GreenSecondaryContainer,
-    onSecondaryContainer = OnGreenSecondaryContainer,
-    tertiary = BlueTertiary,
-    onTertiary = OnBlueTertiary,
-    tertiaryContainer = BlueTertiaryContainer,
-    onTertiaryContainer = OnBlueTertiaryContainer,
-    background = Neutral99,
-    onBackground = NeutralVariant30,
-    surface = Neutral99,
-    onSurface = NeutralVariant30,
+    primary = PremiumGreen,
+    onPrimary = SurfaceWhite,
+    primaryContainer = GreenSoft,
+    onPrimaryContainer = PremiumGreen,
+    secondary = SecondaryAction,
+    onSecondary = NeutralText,
+    background = BaseGray,
+    onBackground = NeutralText,
+    surface = SurfaceWhite,
+    onSurface = NeutralText,
+    surfaceVariant = BaseGray,
+    onSurfaceVariant = SubtitleText,
     error = ErrorRed,
-    onError = OnErrorRed
+    outline = SecondaryAction
 )
 
 @Composable
 fun ScentGuardTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
+    
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

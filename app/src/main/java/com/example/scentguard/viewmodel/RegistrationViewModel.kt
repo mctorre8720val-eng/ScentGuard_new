@@ -3,7 +3,7 @@ package com.example.scentguard.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RegistrationViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val userRepository: UserRepository = UserRepository()
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val TAG = "RegistrationViewModel"
@@ -107,8 +107,6 @@ class RegistrationViewModel(
                         _statusMessage.value = ""
                         return@launch
                     }
-                } else {
-                    Log.d(TAG, "User already authenticated, skipping Auth creation for UID: $firebaseUid")
                 }
 
                 if (firebaseUid != null) {
@@ -132,13 +130,13 @@ class RegistrationViewModel(
                     }
 
                     // 4. Prepare Profile Object
-                    val user = User(
+                    val user = UserProfile(
                         uid = firebaseUid!!,
                         fullName = trimmedFullName,
                         restaurantName = finalRestaurantName,
                         restaurantId = finalRestaurantId,
                         email = trimmedEmail,
-                        role = trimmedRole,
+                        role = trimmedRole.uppercase(),
                         createdAt = Timestamp.now()
                     )
 
@@ -150,11 +148,19 @@ class RegistrationViewModel(
 
                     if (dbResult.isSuccess) {
                         _statusMessage.value = "Registration complete!"
+                        
+                        // Update the session
+                        authRepository.restoreSession()
+                        
                         _registrationState.value = Resource.Success(Unit)
                     } else {
-                        _registrationState.value = Resource.Error(
-                            "Profile setup failed: ${dbResult.exceptionOrNull()?.message}"
-                        )
+                        val error = dbResult.exceptionOrNull()
+                        val message = if (error?.message?.contains("permission-denied", ignoreCase = true) == true) {
+                            "Access denied. Please update Firestore security rules."
+                        } else {
+                            "Profile setup failed: ${error?.message}"
+                        }
+                        _registrationState.value = Resource.Error(message)
                         _statusMessage.value = ""
                     }
                 } else {

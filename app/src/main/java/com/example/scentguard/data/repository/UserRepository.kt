@@ -2,7 +2,7 @@ package com.example.scentguard.data.repository
 
 import android.util.Log
 import com.example.scentguard.data.model.Restaurant
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -26,7 +26,7 @@ class UserRepository(
      * @param uid The UID from Firebase Auth.
      * @param user The user profile data.
      */
-    suspend fun saveUserProfile(uid: String, user: User): Result<Unit> {
+    suspend fun saveUserProfile(uid: String, user: UserProfile): Result<Unit> {
         Log.d(TAG, "Saving user profile for UID: $uid")
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
@@ -63,11 +63,15 @@ class UserRepository(
             val restaurantId = UUID.randomUUID().toString()
             val inviteCode = generateInviteCode()
             
+            // Set expiry to 24 hours from now
+            val expiry = Timestamp(Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)))
+
             val restaurant = Restaurant(
                 id = restaurantId,
                 name = name,
                 managerUid = managerUid,
                 inviteCode = inviteCode,
+                inviteCodeExpiresAt = expiry,
                 createdAt = Timestamp.now()
             )
             
@@ -108,6 +112,15 @@ class UserRepository(
                 null
             }
             
+            // Check for expiration
+            if (restaurant != null) {
+                val expiry = restaurant.inviteCodeExpiresAt
+                if (expiry != null && expiry.toDate().before(Date())) {
+                    Log.w(TAG, "Invite code $inviteCode has expired")
+                    return Result.failure(Exception("Invite code has expired"))
+                }
+            }
+            
             Result.success(restaurant)
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching restaurant by code: $inviteCode", e)
@@ -118,7 +131,7 @@ class UserRepository(
     /**
      * Retrieves all staff members belonging to a specific restaurant.
      */
-    suspend fun getStaffByRestaurant(restaurantId: String): Result<List<User>> {
+    suspend fun getStaffByRestaurant(restaurantId: String): Result<List<UserProfile>> {
         Log.d(TAG, "Fetching staff for restaurant ID: $restaurantId")
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
@@ -131,10 +144,10 @@ class UserRepository(
             }
             
             val staff = try {
-                query.toObjects(User::class.java)
+                query.toObjects(UserProfile::class.java)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse staff list", e)
-                emptyList<User>()
+                emptyList<UserProfile>()
             }
             
             Log.d(TAG, "Found ${staff.size} staff members")
@@ -193,6 +206,30 @@ class UserRepository(
         }
     }
 
+    suspend fun refreshInviteCode(restaurantId: String): Result<String> {
+        Log.d(TAG, "Refreshing invite code for restaurant: $restaurantId")
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            val newCode = generateInviteCode()
+            val newExpiry = Timestamp(Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)))
+            
+            withTimeout(TIMEOUT_MS) {
+                db.collection("restaurants").document(restaurantId).update(
+                    mapOf(
+                        "inviteCode" to newCode,
+                        "inviteCodeExpiresAt" to newExpiry
+                    )
+                ).await()
+            }
+            
+            Log.d(TAG, "Invite code refreshed: $newCode")
+            Result.success(newCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to refresh invite code", e)
+            Result.failure(e)
+        }
+    }
+
     private fun generateInviteCode(): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         return (1..6)
@@ -219,7 +256,7 @@ class UserRepository(
         }
     }
 
-    suspend fun getUserProfile(): Result<User?> {
+    suspend fun getUserProfile(): Result<UserProfile?> {
         val uid = auth?.currentUser?.uid
         Log.d(TAG, "Fetching user profile for UID: $uid")
         return try {
@@ -236,7 +273,7 @@ class UserRepository(
             }
 
             val user = try {
-                snapshot.toObject(User::class.java)
+                snapshot.toObject(UserProfile::class.java)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse User object for $uid", e)
                 null

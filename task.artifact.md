@@ -1,24 +1,16 @@
-# Task - Multi-Tenant Role System Implementation
+# Task: Expiring Invite Codes & Staff Management
 
-- `[x]` **Phase 1: Restaurant Workspace Foundation**
-    - `[x]` Update `User` model with `restaurantId`
-    - `[x]` Create `Restaurant` data model
-    - `[x]` Update `UserRepository` with restaurant CRUD operations
-- `[x]` **Phase 2: Invitation System**
-    - `[x]` Update `RegistrationViewModel` for Manager/Staff flows
-    - `[x]` Refactor `SignUpScreen` for invitation code entry
-- `[x]` **Phase 3: Staff Management**
-    - `[x]` Create `StaffScreen` for Managers
-    - `[x]` Add "Staff" item to `ScentGuardNavigationDrawer`
-    - `[x]` Update `NavGraph` with new routes
-- `[x]` **Phase 4: Role-Based Security & Data Isolation**
-    - `[x]` Enforce role-checks in ViewModels and Screens
-    - `[x]` Ensure all repository queries use `restaurantId` filtering
-- `[x]` **Phase 5: Authentication & Registration Hardening**
-    - `[x]` Atomic registration logic
-    - `[x]` Fixed navigation deadlocks
-    - `[x]` Comprehensive logging and error feedback
-    - `[x]` End-to-end logic verification
-- `[x]` **Phase 6: Verification & Cleanup**
-    - `[x]` Verify build and end-to-end registration flow
-    - `[x]` Document changes in `Walkthrough`
+- `[x]` **Phase 1: Backend & Model**
+    - `[x]` Add `inviteCodeExpiresAt` to `Restaurant.kt`
+    - `[x]` Implement `refreshInviteCode` in `UserRepository.kt`
+    - `[x]` Update `getRestaurantByInviteCode` with expiry check
+- `[x]` **Phase 2: ViewModel & Logic**
+    - `[x]` Implement code refresh logic in `StaffViewModel.kt`
+    - `[x]` Implement removal confirmation state in `StaffViewModel.kt`
+- `[x]` **Phase 3: UI Implementation**
+    - `[x]` Redesign Invite Card in `StaffScreen.kt` (Timer + Refresh)
+    - `[x]` Add "Remove Staff" confirmation dialog
+    - `[x]` Update `ScentGuardNavigationDrawer.kt` visibility
+- `[x]` **Phase 4: Verification**
+    - `[x]` Test full "Join/Remove" lifecycle
+    - `[x]` Test manual code refresh

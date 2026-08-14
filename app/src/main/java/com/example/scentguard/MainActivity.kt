@@ -17,13 +17,15 @@ import com.example.scentguard.navigation.SetupNavGraph
 import com.example.scentguard.ui.theme.ScentGuardTheme
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
+import com.example.scentguard.viewmodel.ViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val settingsViewModel: SettingsViewModel = viewModel()
+            val factory = ViewModelFactory(application)
+            val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
             val themeMode by settingsViewModel.themeMode.collectAsState()
             
             val isDarkTheme = when (themeMode) {
@@ -38,7 +40,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val mainViewModel: MainViewModel = viewModel()
+                    val mainViewModel: MainViewModel = viewModel(factory = factory)
                     SetupNavGraph(
                         navController = navController,
                         mainViewModel = mainViewModel

@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ForgotPasswordViewModel(
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _resetState = MutableStateFlow<Resource<Unit>>(Resource.Idle())

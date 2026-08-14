@@ -4,26 +4,26 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.ScentGuardApplication
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
+import com.example.scentguard.data.model.UserSession
 import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(
+    application: Application,
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
+) : AndroidViewModel(application) {
 
-    private val authRepository = AuthRepository()
-    private val userRepository = UserRepository()
     private val preferencesManager = (application as ScentGuardApplication).preferencesManager
 
-    private val _userProfile = MutableStateFlow<Resource<User>>(Resource.Idle())
-    val userProfile: StateFlow<Resource<User>> = _userProfile
+    private val _userProfile = MutableStateFlow<Resource<UserProfile>>(Resource.Idle())
+    val userProfile: StateFlow<Resource<UserProfile>> = _userProfile
 
     private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
     val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted
@@ -31,9 +31,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isUserAuthenticated = MutableStateFlow(authRepository.currentUser != null)
     val isUserAuthenticated: StateFlow<Boolean> = _isUserAuthenticated
 
+    val userSession: StateFlow<UserSession?> = authRepository.userSession
+
+    val currentUserEmail: String?
+        get() = authRepository.currentUser?.email
+
     init {
         observeAuthState()
         loadLocalOnboardingStatus()
+        
+        // Attempt to restore session if firebase user exists but session is null
+        if (authRepository.currentUser != null && authRepository.userSession.value == null) {
+            viewModelScope.launch {
+                authRepository.restoreSession()
+            }
+        }
     }
 
     private fun loadLocalOnboardingStatus() {
@@ -49,7 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (firebaseUser != null) {
                     fetchUserProfile()
                 } else {
-                    // Logout or No user
+                    // Not authenticated - set error to trigger navigation in Splash
                     _userProfile.value = Resource.Error("Not authenticated")
                     _onboardingCompleted.value = false
                 }
@@ -67,11 +79,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             result.onSuccess { user ->
                 if (user != null) {
                     _userProfile.value = Resource.Success(user)
-                    // Sync local cache with Firestore source of truth
                     _onboardingCompleted.value = user.onboardingCompleted
                     preferencesManager.setOnboardingCompleted(user.onboardingCompleted)
                 } else {
-                    // Specific error for missing documents
                     _userProfile.value = Resource.Error("MISSING_PROFILE")
                 }
             }.onFailure {
@@ -88,7 +98,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 preferencesManager.setOnboardingCompleted(true)
                 _onboardingCompleted.value = true
-                // Refresh profile to ensure state consistency
                 fetchUserProfile()
             }
         }
@@ -97,10 +106,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
-            // Reset local states
             _userProfile.value = Resource.Idle()
             _onboardingCompleted.value = false
             preferencesManager.setOnboardingCompleted(false)
+            _isUserAuthenticated.value = false
         }
     }
 }

@@ -1,10 +1,12 @@
 package com.example.scentguard.ui.screens.login
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -12,8 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -21,24 +23,31 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.R
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardBackground
 import com.example.scentguard.ui.components.ScentGuardButton
+import com.example.scentguard.ui.components.GoogleButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.LoginViewModel
 import com.example.scentguard.viewmodel.MainViewModel
-import kotlinx.coroutines.delay
+import com.example.scentguard.viewmodel.ViewModelFactory
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     navController: NavHostController,
     mainViewModel: MainViewModel,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = viewModel(factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -48,12 +57,15 @@ fun LoginScreen(
     val onboardingCompleted by mainViewModel.onboardingCompleted.collectAsState()
     val userProfile by mainViewModel.userProfile.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val credentialManager = CredentialManager.create(context)
 
     LaunchedEffect(Unit) {
         viewModel.resetState()
     }
 
-    // Combined Navigation Logic
     LaunchedEffect(loginState, onboardingCompleted, userProfile) {
         if (loginState is Resource.Success && onboardingCompleted != null && userProfile is Resource.Success) {
             val destination = if (onboardingCompleted == true) Screen.Dashboard.route else Screen.Onboarding.route
@@ -63,7 +75,6 @@ fun LoginScreen(
         }
     }
 
-    // Error Handling
     LaunchedEffect(loginState, userProfile) {
         if (loginState is Resource.Error) {
             snackbarHostState.showSnackbar(
@@ -93,66 +104,54 @@ fun LoginScreen(
         }
     }
 
-    ScentGuardBackground(showBloom = true) {
+    ScentGuardBackground {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                // Background Detail
-                Image(
-                    painter = painterResource(id = R.drawable.ic_abstract_air_waves),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .alpha(0.1f),
-                    alignment = Alignment.TopCenter
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start 
                 ) {
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(64.dp))
                     
-                    // Small Logo for continuity
                     Image(
                         painter = painterResource(id = R.drawable.ic_scentguard_logo_vector),
                         contentDescription = null,
                         modifier = Modifier.size(64.dp)
                     )
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Text(
-                        text = "Welcome Back",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = "Sign in",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold
                     )
                     
                     Text(
-                        text = "Sign in to continue monitoring",
+                        text = "Access your restaurant dashboard",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 40.dp)
+                        modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
                     )
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 32.dp,
-                        contentPadding = 32.dp
+                        contentPadding = 24.dp
                     ) {
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email Address") },
+                            label = { Text("Email") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
@@ -160,11 +159,13 @@ fun LoginScreen(
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                             )
                         )
                         
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         
                         OutlinedTextField(
                             value = password,
@@ -178,54 +179,105 @@ fun LoginScreen(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                             )
                         )
                         
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                             TextButton(onClick = { navController.navigate(Screen.ForgotPassword.route) }) {
                                 Text(
-                                    "Forgot Password?", 
+                                    "Forgot password?", 
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         
                         val isAnyLoading = loginState is Resource.Loading || (loginState is Resource.Success && userProfile is Resource.Loading)
                         
                         ScentGuardButton(
-                            text = "Sign In",
+                            text = "Continue",
                             onClick = { viewModel.login(email, password) },
                             isLoading = isAnyLoading
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                            Text(" or ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        GoogleButton(
+                            onClick = {
+                                val googleIdOption = GetGoogleIdOption.Builder()
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .setServerClientId("75241057260-05s50pjcl5a7sambng2qa999femjcr2i.apps.googleusercontent.com")
+                                    .setAutoSelectEnabled(true)
+                                    .build()
+
+                                val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(googleIdOption)
+                                    .build()
+
+                                scope.launch {
+                                    try {
+                                        val result = credentialManager.getCredential(context, request)
+                                        val credential = result.credential
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        val idToken = googleIdTokenCredential.idToken
+                                        viewModel.signInWithGoogle(idToken)
+                                    } catch (e: GetCredentialException) {
+                                        Log.e("LoginScreen", "Credential failure: \${e.message}", e)
+                                        scope.launch { 
+                                            snackbarHostState.showSnackbar("Google failure: \${e.type} - \${e.message}") 
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("LoginScreen", "Unexpected error: \${e.message}", e)
+                                        scope.launch { 
+                                            snackbarHostState.showSnackbar("Error: \${e.localizedMessage}") 
+                                        }
+                                    }
+                                }
+                            },
+                            isLoading = loginState is Resource.Loading,
+                            enabled = !isAnyLoading
                         )
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    TextButton(onClick = { navController.navigate(Screen.SignUp.route) }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Don't have an account? ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { navController.navigate(Screen.SignUp.route) }) {
                             Text(
-                                text = "New to ScentGuard? ",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Create Account",
+                                text = "Sign up",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(48.dp))
                 }
             }
         }

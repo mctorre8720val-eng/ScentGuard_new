@@ -1,5 +1,6 @@
 package com.example.scentguard.ui.screens.profile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,13 +16,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.scentguard.data.model.User
+import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
@@ -68,7 +70,8 @@ fun ProfileScreen(
                         title = {
                             Text(
                                 "Profile",
-                                style = MaterialTheme.typography.titleLarge
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -93,47 +96,36 @@ fun ProfileScreen(
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    // Profile Header
                     ProfileHeader(user)
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
                     
-                    // Account Information
                     SectionTitle("Account Details")
                     
-                    val infoItems = mutableListOf(
-                        InfoItem("Full Name", user?.fullName ?: "N/A", Icons.Outlined.Person),
-                        InfoItem("Email", user?.email ?: "N/A", Icons.Outlined.Email),
-                        InfoItem("Role", user?.role ?: "Staff", Icons.Outlined.Badge),
-                        InfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant)
-                    )
+                    val infoItems = mutableListOf<Any>()
+                    infoItems.add(ProfileInfoItem("Full Name", user?.fullName ?: "N/A", Icons.Outlined.Person))
+                    infoItems.add(ProfileInfoContent(user?.email ?: "N/A", Icons.Outlined.Email))
+                    infoItems.add(ProfileInfoItem("Role", user?.role ?: "Staff", Icons.Outlined.Badge))
+                    infoItems.add(ProfileInfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant))
                     
                     if (user?.role == "Manager") {
-                        // We need to fetch the invite code from the restaurant document.
-                        // For now, let's assume it's stored in the user profile for easy access, 
-                        // or we could fetch it via a RestaurantViewModel.
-                        // To keep it simple for this phase, I'll add a placeholder or assume we might want to store it in User model too for quick display.
-                        // Actually, I didn't add inviteCode to User model. 
-                        // I'll add a note that the Manager can see it in the Staff screen.
-                        infoItems.add(InfoItem("Invite Code", "Check Staff Section", Icons.Outlined.VpnKey, isClickable = true))
+                        infoItems.add(ProfileInfoItem("Invite Code", "Check Staff Section", Icons.Outlined.VpnKey, isClickable = true))
                     }
                     
                     ProfileInfoCard(items = infoItems)
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    // App Settings / Actions
-                    SectionTitle("App Settings")
+                    SectionTitle("Security \u0026 Alerts")
                     ProfileInfoCard(
                         items = listOf(
-                            InfoItem("Security", "Password & Auth", Icons.Outlined.Security, isClickable = true),
-                            InfoItem("Notifications", "Alert preferences", Icons.Outlined.NotificationsActive, isClickable = true)
+                            ProfileInfoItem("Security", "Password & Auth", Icons.Outlined.Security, isClickable = true),
+                            ProfileInfoItem("Notifications", "Alert preferences", Icons.Outlined.NotificationsActive, isClickable = true)
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    // Danger Zone
                     Button(
                         onClick = {
                             mainViewModel.logout()
@@ -143,21 +135,21 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
                             contentColor = MaterialTheme.colorScheme.error
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = CircleShape,
+                        elevation = null
                     ) {
-                        Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Outlined.Logout, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Log Out", fontWeight = FontWeight.Bold)
                     }
 
-                    Spacer(modifier = Modifier.height(120.dp)) // Floating nav space
+                    Spacer(modifier = Modifier.height(120.dp))
                 }
             }
 
-            // The Floating Nav
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Profile.route,
@@ -174,30 +166,36 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(user: User?) {
+fun ProfileHeader(user: UserProfile?) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
-            modifier = Modifier.size(100.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = CircleShape
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = user?.fullName?.take(1)?.uppercase() ?: "G",
                     style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
+        
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = user?.fullName ?: "Guest User",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.5).sp
         )
         Text(
             text = user?.role ?: "Staff Member",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium
         )
@@ -208,74 +206,34 @@ fun ProfileHeader(user: User?) {
 fun SectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp, start = 4.dp)
+            .padding(bottom = 12.dp)
     )
 }
 
 @Composable
-fun ProfileInfoCard(items: List<InfoItem>) {
+fun ProfileInfoCard(items: List<Any>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp, 
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
     ) {
         Column {
             items.forEachIndexed { index, item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                item.icon, 
-                                contentDescription = null, 
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            item.label, 
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            item.value, 
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    if (item.isClickable) {
-                        Icon(
-                            Icons.Outlined.ChevronRight, 
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
+                when (item) {
+                    is ProfileInfoItem -> ProfileInfoRow(item.label, item.value, item.icon, item.isClickable)
+                    is ProfileInfoContent -> ProfileInfoRow("Email", item.value, item.icon, false)
                 }
+                
                 if (index < items.size - 1) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                 }
             }
@@ -283,9 +241,33 @@ fun ProfileInfoCard(items: List<InfoItem>) {
     }
 }
 
-data class InfoItem(
-    val label: String,
-    val value: String,
-    val icon: ImageVector,
-    val isClickable: Boolean = false
-)
+@Composable
+private fun ProfileInfoRow(label: String, value: String, icon: ImageVector, isClickable: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(40.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+            shape = CircleShape
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        }
+        if (isClickable) {
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+data class ProfileInfoItem(val label: String, val value: String, val icon: ImageVector, val isClickable: Boolean = false)
+data class ProfileInfoContent(val value: String, val icon: ImageVector)

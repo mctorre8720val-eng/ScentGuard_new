@@ -7,5 +7,6 @@ data class Restaurant(
     val name: String = "",
     val managerUid: String = "",
     val inviteCode: String = "",
+    val inviteCodeExpiresAt: Timestamp? = null,
     val createdAt: Timestamp? = null
 )

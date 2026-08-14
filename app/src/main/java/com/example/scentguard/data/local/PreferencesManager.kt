@@ -15,9 +15,14 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class PreferencesManager(private val context: Context) {
 
     companion object {
-        val THEME_MODE = stringPreferencesKey("theme_mode") // "light", "dark", "system"
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        
+        // Session Keys
+        val SESSION_UID = stringPreferencesKey("session_uid")
+        val SESSION_ROLE = stringPreferencesKey("session_role")
+        val SESSION_RESTAURANT_ID = stringPreferencesKey("session_restaurant_id")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
@@ -47,6 +52,27 @@ class PreferencesManager(private val context: Context) {
     suspend fun setOnboardingCompleted(completed: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[ONBOARDING_COMPLETED] = completed
+        }
+    }
+
+    // Session Management
+    val sessionUid: Flow<String?> = context.dataStore.data.map { it[SESSION_UID] }
+    val sessionRole: Flow<String?> = context.dataStore.data.map { it[SESSION_ROLE] }
+    val sessionRestaurantId: Flow<String?> = context.dataStore.data.map { it[SESSION_RESTAURANT_ID] }
+
+    suspend fun saveSession(uid: String, role: String, restaurantId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[SESSION_UID] = uid
+            prefs[SESSION_ROLE] = role
+            prefs[SESSION_RESTAURANT_ID] = restaurantId
+        }
+    }
+
+    suspend fun clearSession() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(SESSION_UID)
+            prefs.remove(SESSION_ROLE)
+            prefs.remove(SESSION_RESTAURANT_ID)
         }
     }
 }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class HistoryViewModel(
-    private val historyRepository: HistoryRepository = HistoryRepository()
+    private val historyRepository: HistoryRepository
 ) : ViewModel() {
 
     private val _historyState = MutableStateFlow<Resource<List<HistoryItem>>>(Resource.Idle())

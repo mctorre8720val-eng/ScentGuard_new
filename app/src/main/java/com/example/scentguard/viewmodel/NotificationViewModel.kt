@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class NotificationViewModel(
-    private val notificationRepository: NotificationRepository = NotificationRepository()
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _notificationsState = MutableStateFlow<Resource<List<NotificationItem>>>(Resource.Idle())
