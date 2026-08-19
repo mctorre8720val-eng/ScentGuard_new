@@ -5,6 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -64,7 +66,9 @@ fun DashboardScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isWideScreen = maxWidth > 600.dp
+            
             Scaffold(
                 topBar = {
                     CenterAlignedTopAppBar(
@@ -103,22 +107,37 @@ fun DashboardScreen(
                         DashboardHeader(user)
                     }
                     
-                    item {
-                        AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
+                    if (isWideScreen) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                            ) {
+                                Box(modifier = Modifier.weight(1.2f)) {
+                                    AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
+                                }
+                                Box(modifier = Modifier.weight(0.8f)) {
+                                    StatisticsSection()
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
+                        }
+                        item {
+                            StatisticsSection()
+                        }
                     }
                     
                     item {
-                        MetricsGrid()
+                        MetricsGrid(isWideScreen)
                     }
 
                     if (user?.role?.uppercase() == "MANAGER") {
                         item {
                             ScentGuardFanControl()
                         }
-                    }
-                    
-                    item {
-                        StatisticsSection()
                     }
                     
                     item {
@@ -286,8 +305,17 @@ fun AirQualityHero(onViewAnalytics: () -> Unit) {
 }
 
 @Composable
-fun MetricsGrid() {
+fun MetricsGrid(isWideScreen: Boolean) {
+    val columns = if (isWideScreen) 4 else 2
+    
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            "Real-time Metrics",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             MetricCard(
                 label = "Room Temp",
@@ -303,6 +331,41 @@ fun MetricsGrid() {
                 icon = Icons.Outlined.Memory,
                 modifier = Modifier.weight(1f)
             )
+            if (isWideScreen) {
+                MetricCard(
+                    label = "Gas Level",
+                    value = "185",
+                    unit = "ppm",
+                    icon = Icons.Outlined.Cloud,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    label = "Humidity",
+                    value = "64",
+                    unit = "%",
+                    icon = Icons.Outlined.WaterDrop,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        
+        if (!isWideScreen) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                MetricCard(
+                    label = "Gas Level",
+                    value = "185",
+                    unit = "ppm",
+                    icon = Icons.Outlined.Cloud,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    label = "Humidity",
+                    value = "64",
+                    unit = "%",
+                    icon = Icons.Outlined.WaterDrop,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
@@ -344,10 +407,10 @@ fun StatisticsSection() {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 12.dp)
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MiniStatCard("Alerts", "2", Icons.Outlined.WarningAmber, Modifier.weight(1f))
-            MiniStatCard("Uptime", "99%", Icons.Outlined.Timer, Modifier.weight(1f))
-            MiniStatCard("Status", "OK", Icons.Outlined.Sensors, Modifier.weight(1f))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MiniStatCard("Alerts Today", "2", Icons.Outlined.WarningAmber, Modifier.fillMaxWidth())
+            MiniStatCard("Uptime", "99%", Icons.Outlined.Timer, Modifier.fillMaxWidth())
+            MiniStatCard("Status", "Online", Icons.Outlined.Sensors, Modifier.fillMaxWidth())
         }
     }
 }
@@ -360,11 +423,17 @@ fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modi
         color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = Modifier.padding(16.dp), 
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
             Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

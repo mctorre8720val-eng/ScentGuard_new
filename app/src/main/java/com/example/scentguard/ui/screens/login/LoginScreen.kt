@@ -35,6 +35,7 @@ import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.GoogleButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.LoginViewModel
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
@@ -109,16 +110,20 @@ fun LoginScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
+                        .responsiveContainer(maxWidth = 420.dp)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.Start 
                 ) {
-                    Spacer(modifier = Modifier.height(64.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Image(
                         painter = painterResource(id = R.drawable.ic_scentguard_logo_vector),
@@ -144,7 +149,8 @@ fun LoginScreen(
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = 24.dp
+                        contentPadding = 24.dp,
+                        maxWidth = 420.dp
                     ) {
                         OutlinedTextField(
                             value = email,
@@ -207,7 +213,8 @@ fun LoginScreen(
                         ScentGuardButton(
                             text = "Continue",
                             onClick = { viewModel.login(email, password) },
-                            isLoading = isAnyLoading
+                            isLoading = isAnyLoading,
+                            maxWidth = 420.dp
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -240,20 +247,21 @@ fun LoginScreen(
                                         val idToken = googleIdTokenCredential.idToken
                                         viewModel.signInWithGoogle(idToken)
                                     } catch (e: GetCredentialException) {
-                                        Log.e("LoginScreen", "Credential failure: \${e.message}", e)
+                                        Log.e("LoginScreen", "Credential failure: ${e.message}", e)
                                         scope.launch { 
-                                            snackbarHostState.showSnackbar("Google failure: \${e.type} - \${e.message}") 
+                                            snackbarHostState.showSnackbar("Google failure: ${e.type} - ${e.message}") 
                                         }
                                     } catch (e: Exception) {
-                                        Log.e("LoginScreen", "Unexpected error: \${e.message}", e)
+                                        Log.e("LoginScreen", "Unexpected error: ${e.message}", e)
                                         scope.launch { 
-                                            snackbarHostState.showSnackbar("Error: \${e.localizedMessage}") 
+                                            snackbarHostState.showSnackbar("Error: ${e.localizedMessage}") 
                                         }
                                     }
                                 }
                             },
                             isLoading = loginState is Resource.Loading,
-                            enabled = !isAnyLoading
+                            enabled = !isAnyLoading,
+                            modifier = Modifier.fillMaxWidth() // responsiveContainer is inside
                         )
                     }
 
@@ -278,6 +286,7 @@ fun LoginScreen(
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }

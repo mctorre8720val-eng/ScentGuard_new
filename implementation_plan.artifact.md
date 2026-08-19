@@ -1,69 +1,52 @@
-# Implementation Plan - Fixing Staff Permissions & Data Consistency
+# Implementation Plan - Modern Responsive UI Upgrade
 
-This plan addresses the `PERMISSION_DENIED` error in the Staff Management screen by aligning the Firestore security rules with the application's query patterns and ensuring data casing consistency.
+This plan outlines the transformation of ScentGuard into a professionally designed, adaptive Android application, focusing on consistent proportions and Material 3 responsive principles.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Firestore Security Rules:** You MUST update your rules in the Firebase Console with the version provided below. The previous rules were too restrictive, preventing Managers from querying their staff list.
-> **Data Consistency:** I am standardizing all "Role" data to uppercase (`MANAGER`, `STAFF`) to match the new security logic.
+> **Adaptive Layouts:** On tablets and wide phones, some single-column layouts will transition to two-column grids to prevent "stretched" content.
+> **Max-Width Constraints:** Components will use specific max-widths to maintain visual balance (Buttons: 360-400dp, Forms: 400-480dp).
 
 ## Proposed Changes
 
-### 1. Data Consistency Fixes
-#### [MODIFY] [UserRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/UserRepository.kt)
-- Update `getStaffByRestaurant` query to use uppercase `"STAFF"` to match the registration logic.
-- Standardize all internal role checks to uppercase.
+### 1. Responsive Component System
+#### [MODIFY] [ScentGuardButton.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/ScentGuardButton.kt)
+- Standardize height hierarchy: Primary (48-56dp), Secondary (40-48dp).
+- Introduce `maxWidth` constraints to prevent excessive stretching on wide screens.
+- Maintain consistent visual scale (typography, radius, icons) across all devices.
 
-### 2. Security Rules Overhaul
-I have redesigned the Firestore rules to specifically support the "Staff List" query. These rules allow a user to read other user profiles IF they both belong to the same `restaurantId`.
+#### [MODIFY] [ScentGuardCard.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/ScentGuardCard.kt)
+- Implement adaptive width strategy (narrow on phones, centered with max-width on tablets).
+- Refine internal padding to follow an 8dp grid system that scales with the window size.
+
+#### [MODIFY] [ModifierExtensions.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/utils/ModifierExtensions.kt)
+- Create a `.responsiveContainer(maxWidth)` modifier that applies intelligent constraints and centering.
 
 ---
 
-## Security Rules (Action Required)
-Paste these into **Firebase Console > Firestore > Rules**:
+### 2. Screen Adaptation (Structural Layouts)
+#### [MODIFY] [DashboardScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/dashboard/DashboardScreen.kt)
+- **Compact:** Vertical stack (Air Quality -> Stats -> Sensor -> Alerts).
+- **Medium/Expanded:** Multi-column grid (e.g., Air Quality next to System Stats) to utilize horizontal space without scaling individual components.
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+#### [MODIFY] [LoginScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/login/LoginScreen.kt) & [SignUpScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/signup/SignUpScreen.kt)
+- Center the auth card/form horizontally and vertically.
+- Apply a 400-480dp max-width to the form container.
+- Increase surrounding whitespace ("breathing room") on larger screens.
 
-    // User Profile Rules
-    match /users/{userId} {
-      // 1. Allow reading your own profile
-      // 2. Allow reading other profiles IF they share your restaurantId (Crucial for Staff List)
-      allow read: if request.auth != null && (
-        request.auth.uid == userId ||
-        resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId
-      );
-      // Only allow users to write to their own profile
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
+---
 
-    // Restaurant Rules
-    match /restaurants/{restaurantId} {
-      allow read: if request.auth != null;
-      // Only the designated manager can update the restaurant (e.g., refresh invite code)
-      allow write: if request.auth != null && (
-        !exists(/databases/$(database)/documents/restaurants/$(restaurantId)) ||
-        request.auth.uid == get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.managerUid
-      );
-    }
+### 3. Professional Polish
+#### [MODIFY] [Type.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/theme/Type.kt)
+- Refine typography tokens for consistent hierarchy regardless of screen size.
 
-    // Device & Log Rules (Isolated by Restaurant ID)
-    match /devices/{deviceId} {
-      allow read, write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == resource.data.restaurantId;
-    }
-    match /logs/{logId} {
-      allow read, write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == resource.data.restaurantId;
-    }
-  }
-}
-```
+---
 
 ## Verification Plan
-- **Staff List:** Log in as a Manager. Verify the "Current Staff" list loads successfully without the permission error.
-- **Invite Code:** Verify the code and timer show correctly.
-- **Role Enforcement:** Log in as Staff and verify you cannot access the Manager-only Staff Management screen.
+
+### Manual Verification
+- **OPPO-style Phone:** Verify buttons and cards fill width naturally with standard 16-24dp margins.
+- **Large Phone/Foldable:** Verify buttons do NOT stretch past their 360-400dp max-width.
+- **Tablet:** Verify the Dashboard transitions to a 2-column layout.
+- **Consistency Audit:** Check that corner radius, icon sizes, and text scale are identical across all test profiles.

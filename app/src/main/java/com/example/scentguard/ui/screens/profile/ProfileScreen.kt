@@ -28,6 +28,7 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -70,7 +71,7 @@ fun ProfileScreen(
                         title = {
                             Text(
                                 "Profile",
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
                         },
@@ -91,14 +92,15 @@ fun ProfileScreen(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(rememberScrollState())
+                        .responsiveContainer(maxWidth = 480.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     ProfileHeader(user)
                     
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                     
                     SectionTitle("Account Details")
                     
@@ -108,15 +110,15 @@ fun ProfileScreen(
                     infoItems.add(ProfileInfoItem("Role", user?.role ?: "Staff", Icons.Outlined.Badge))
                     infoItems.add(ProfileInfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant))
                     
-                    if (user?.role == "Manager") {
+                    if (user?.role?.uppercase() == "MANAGER") {
                         infoItems.add(ProfileInfoItem("Invite Code", "Check Staff Section", Icons.Outlined.VpnKey, isClickable = true))
                     }
                     
                     ProfileInfoCard(items = infoItems)
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    SectionTitle("Security \u0026 Alerts")
+                    SectionTitle("Security & Alerts")
                     ProfileInfoCard(
                         items = listOf(
                             ProfileInfoItem("Security", "Password & Auth", Icons.Outlined.Security, isClickable = true),
@@ -124,7 +126,7 @@ fun ProfileScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                     
                     Button(
                         onClick = {
@@ -170,10 +172,10 @@ fun ProfileHeader(user: UserProfile?) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             modifier = Modifier
-                .size(100.dp)
+                .size(120.dp)
                 .clip(CircleShape),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
+            shadowElevation = 8.dp,
             border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -186,7 +188,7 @@ fun ProfileHeader(user: UserProfile?) {
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = user?.fullName ?: "Guest User",
             style = MaterialTheme.typography.headlineMedium,
@@ -220,7 +222,6 @@ fun ProfileInfoCard(items: List<Any>) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
         border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
     ) {
         Column {
@@ -233,7 +234,7 @@ fun ProfileInfoCard(items: List<Any>) {
                 if (index < items.size - 1) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 24.dp),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                     )
                 }
             }
@@ -250,7 +251,7 @@ private fun ProfileInfoRow(label: String, value: String, icon: ImageVector, isCl
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(44.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
             shape = CircleShape
         ) {
@@ -264,7 +265,7 @@ private fun ProfileInfoRow(label: String, value: String, icon: ImageVector, isCl
             Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
         }
         if (isClickable) {
-            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
         }
     }
 }

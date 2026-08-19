@@ -33,6 +33,7 @@ import com.example.scentguard.ui.theme.ErrorRed
 import com.example.scentguard.ui.theme.PremiumGreen
 import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.ReportViewModel
@@ -200,6 +201,7 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
             .fillMaxSize()
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
+            .responsiveContainer(maxWidth = 600.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -243,7 +245,9 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
 
 @Composable
 fun ReportSkeleton() {
-    Column(modifier = Modifier.padding(24.dp)) {
+    Column(
+        modifier = Modifier.padding(24.dp).fillMaxSize().responsiveContainer(maxWidth = 600.dp)
+    ) {
         Box(modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(32.dp)).shimmerEffect())
         Spacer(modifier = Modifier.height(40.dp))
         Box(modifier = Modifier.width(180.dp).height(24.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())

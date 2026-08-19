@@ -14,8 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,6 +24,7 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
@@ -117,6 +118,7 @@ fun SettingsScreen(
                         .padding(padding)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState())
+                        .responsiveContainer(maxWidth = 480.dp)
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -206,7 +208,7 @@ fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(selected = selected, onClick = onClick)
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
@@ -236,7 +238,7 @@ fun ToggleItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(44.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
             shape = CircleShape
         ) {
@@ -279,7 +281,7 @@ fun ActionItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(44.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
                 shape = CircleShape
             ) {

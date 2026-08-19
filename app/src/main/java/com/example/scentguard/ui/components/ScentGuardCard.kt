@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.scentguard.utils.pressClickEffect
+import com.example.scentguard.utils.responsiveContainer
 
 @Composable
 fun ScentGuardCard(
@@ -23,12 +24,18 @@ fun ScentGuardCard(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentPadding: Dp = 24.dp,
     onClick: (() -> Unit)? = null,
+    maxWidth: Dp = 480.dp, // Component-specific max width
     content: @Composable ColumnScope.() -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    
+    val baseModifier = modifier
+        .responsiveContainer(maxWidth)
+        .let { if (onClick != null) it.pressClickEffect() else it }
+
     if (onClick != null) {
         Card(
-            modifier = modifier.pressClickEffect(),
+            modifier = baseModifier,
             shape = RoundedCornerShape(cornerRadius),
             colors = CardDefaults.cardColors(
                 containerColor = containerColor,
@@ -53,7 +60,7 @@ fun ScentGuardCard(
         }
     } else {
         Card(
-            modifier = modifier,
+            modifier = baseModifier,
             shape = RoundedCornerShape(cornerRadius),
             colors = CardDefaults.cardColors(
                 containerColor = containerColor,

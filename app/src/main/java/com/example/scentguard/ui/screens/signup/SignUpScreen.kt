@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,6 +31,7 @@ import com.example.scentguard.ui.components.ScentGuardBackground
 import com.example.scentguard.ui.components.ScentGuardButton
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.RegistrationViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
@@ -105,16 +107,20 @@ fun SignUpScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
+                        .responsiveContainer(maxWidth = 440.dp)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Spacer(modifier = Modifier.height(64.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Image(
                         painter = painterResource(id = R.drawable.ic_scentguard_logo_vector),
@@ -160,7 +166,8 @@ fun SignUpScreen(
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = 24.dp
+                        contentPadding = 24.dp,
+                        maxWidth = 440.dp
                     ) {
                         OutlinedTextField(
                             value = fullName,
@@ -289,7 +296,8 @@ fun SignUpScreen(
                                 val role = if (selectedTab == 0) "Manager" else "Staff"
                                 viewModel.register(fullName, restaurantInput, email, role, password, confirmPassword) 
                             },
-                            isLoading = registrationState is Resource.Loading
+                            isLoading = registrationState is Resource.Loading,
+                            maxWidth = 440.dp
                         )
                     }
 

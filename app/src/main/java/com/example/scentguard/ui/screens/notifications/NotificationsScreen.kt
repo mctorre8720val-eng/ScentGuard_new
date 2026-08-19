@@ -26,6 +26,7 @@ import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.NotificationViewModel
@@ -142,7 +143,7 @@ fun NotificationList(items: List<NotificationItem>) {
         }
     } else {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -158,7 +159,10 @@ fun NotificationList(items: List<NotificationItem>) {
 
 @Composable
 fun NotificationSkeletonList() {
-    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier.padding(24.dp).fillMaxSize().responsiveContainer(maxWidth = 600.dp), 
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         repeat(4) {
             Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(24.dp)).shimmerEffect())
         }

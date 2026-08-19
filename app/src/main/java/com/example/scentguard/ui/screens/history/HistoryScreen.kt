@@ -25,6 +25,7 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.HistoryViewModel
 import com.example.scentguard.viewmodel.MainViewModel
@@ -82,7 +83,7 @@ fun HistoryScreen(
                         title = {
                             Text(
                                 "System logs",
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
                         },
@@ -105,12 +106,16 @@ fun HistoryScreen(
             ) { padding ->
                 var searchQuery by remember { mutableStateOf("") }
                 
-                Column(modifier = Modifier.padding(padding)) {
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                ) {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .responsiveContainer(maxWidth = 480.dp)
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         placeholder = { Text("Search logs...") },
                         leadingIcon = { Icon(Icons.Outlined.Search, null, tint = MaterialTheme.colorScheme.primary) },
@@ -122,28 +127,30 @@ fun HistoryScreen(
                         )
                     )
 
-                    when (val state = historyState) {
-                        is Resource.Loading -> {
-                            HistorySkeletonList()
-                        }
-                        is Resource.Success -> {
-                            val filteredItems = state.data?.filter { 
-                                it.title.contains(searchQuery, ignoreCase = true) || 
-                                it.description.contains(searchQuery, ignoreCase = true) 
-                            } ?: emptyList()
-                            HistoryList(filteredItems)
-                        }
-                        is Resource.Error -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(text = state.message ?: "Unknown Error", color = MaterialTheme.colorScheme.error)
-                                    Button(onClick = { viewModel.fetchHistory() }, modifier = Modifier.padding(top = 16.dp)) {
-                                        Text("Retry")
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (val state = historyState) {
+                            is Resource.Loading -> {
+                                HistorySkeletonList()
+                            }
+                            is Resource.Success -> {
+                                val filteredItems = state.data?.filter { 
+                                    it.title.contains(searchQuery, ignoreCase = true) || 
+                                    it.description.contains(searchQuery, ignoreCase = true) 
+                                } ?: emptyList()
+                                HistoryList(filteredItems)
+                            }
+                            is Resource.Error -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(text = state.message ?: "Unknown Error", color = MaterialTheme.colorScheme.error)
+                                        Button(onClick = { viewModel.fetchHistory() }, modifier = Modifier.padding(top = 16.dp)) {
+                                            Text("Retry")
+                                        }
                                     }
                                 }
                             }
+                            else -> {}
                         }
-                        else -> {}
                     }
                 }
             }
@@ -171,7 +178,7 @@ fun HistoryList(items: List<HistoryItem>) {
         }
     } else {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -188,7 +195,7 @@ fun HistoryList(items: List<HistoryItem>) {
 @Composable
 fun HistorySkeletonList() {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         userScrollEnabled = false

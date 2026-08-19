@@ -26,6 +26,7 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.StaffViewModel
@@ -152,7 +153,12 @@ fun StaffScreen(
                     )
                 }
             ) { padding ->
-                Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .responsiveContainer(maxWidth = 600.dp)
+                ) {
                     
                     val restaurant = (restaurantState as? Resource.Success)?.data
                     if (restaurant != null) {
@@ -331,7 +337,7 @@ fun DurationChip(label: String, value: Long, selected: Boolean, onClick: (Long) 
 @Composable
 fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -344,7 +350,10 @@ fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit) {
 
 @Composable
 fun StaffSkeletonList() {
-    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier.padding(24.dp).fillMaxSize().responsiveContainer(maxWidth = 600.dp), 
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         repeat(3) {
             Box(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(24.dp)).shimmerEffect())
         }
