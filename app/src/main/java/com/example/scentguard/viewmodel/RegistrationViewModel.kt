@@ -84,7 +84,12 @@ class RegistrationViewModel(
                         finalRestaurantId = restaurant.id
                         finalRestaurantName = restaurant.name
                     } else {
-                        _registrationState.value = Resource.Error("Invalid or expired invitation code")
+                        val errorMessage = if (restaurantResult.isFailure) {
+                            restaurantResult.exceptionOrNull()?.message ?: "Invalid invitation code"
+                        } else {
+                            "Invalid invitation code"
+                        }
+                        _registrationState.value = Resource.Error(errorMessage)
                         _statusMessage.value = ""
                         return@launch
                     }

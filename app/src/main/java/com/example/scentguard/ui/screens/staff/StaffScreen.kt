@@ -30,8 +30,9 @@ import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.StaffViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,12 +57,14 @@ fun StaffScreen(
     val restaurantState by staffViewModel.restaurantInfo.collectAsState()
     val isRefreshing by staffViewModel.isRefreshingCode.collectAsState()
     val removalState by staffViewModel.removalState.collectAsState()
+    val timeRemaining by staffViewModel.timeRemaining.collectAsState()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var userToRemove by remember { mutableStateOf<UserProfile?>(null) }
+    var selectedDuration by remember { mutableLongStateOf(24L) }
 
     LaunchedEffect(user?.restaurantId) {
         user?.restaurantId?.let { 
@@ -156,7 +159,10 @@ fun StaffScreen(
                         InviteCodeCard(
                             restaurant = restaurant,
                             isRefreshing = isRefreshing,
-                            onRefresh = { staffViewModel.refreshInviteCode(restaurant.id) }
+                            timeRemaining = timeRemaining,
+                            selectedDuration = selectedDuration,
+                            onDurationChange = { selectedDuration = it },
+                            onRefresh = { staffViewModel.refreshInviteCode(restaurant.id, selectedDuration) }
                         )
                     }
 
@@ -183,11 +189,28 @@ fun StaffScreen(
                                     )
                                 }
                             }
-                            is Resource.Error -> Text(
-                                state.message ?: "Error loading staff",
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                            is Resource.Error -> {
+                                Column(
+                                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = state.message ?: "Permission Denied",
+                                        color = MaterialTheme.colorScheme.error,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Button(onClick = { 
+                                        user?.restaurantId?.let { 
+                                            staffViewModel.fetchStaff(it) 
+                                            staffViewModel.fetchRestaurantInfo(it)
+                                        } 
+                                    }) {
+                                        Text("Retry")
+                                    }
+                                }
+                            }
                             else -> {}
                         }
                     }
@@ -213,19 +236,12 @@ fun StaffScreen(
 fun InviteCodeCard(
     restaurant: Restaurant,
     isRefreshing: Boolean,
+    timeRemaining: String,
+    selectedDuration: Long,
+    onDurationChange: (Long) -> Unit,
     onRefresh: () -> Unit
 ) {
-    val expiry = restaurant.inviteCodeExpiresAt?.toDate()
-    val isExpired = expiry != null && expiry.before(java.util.Date())
-    
-    val timeRemaining = if (expiry != null && !isExpired) {
-        val diff = expiry.time - System.currentTimeMillis()
-        val hours = TimeUnit.MILLISECONDS.toHours(diff)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(diff) % 60
-        String.format("%02dh %02dm", hours, minutes)
-    } else {
-        "Expired"
-    }
+    val isExpired = timeRemaining == "Expired"
 
     Surface(
         modifier = Modifier.padding(24.dp).fillMaxWidth(),
@@ -243,15 +259,13 @@ fun InviteCodeCard(
             
             Spacer(Modifier.height(8.dp))
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    restaurant.inviteCode,
-                    style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 4.sp,
-                    color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                )
-            }
+            Text(
+                text = restaurant.inviteCode,
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 4.sp,
+                color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
             
             Spacer(Modifier.height(12.dp))
             
@@ -260,7 +274,7 @@ fun InviteCodeCard(
                 shape = CircleShape
             ) {
                 Text(
-                    text = if (isExpired) "Code Expired" else "Expires in: \${timeRemaining}",
+                    text = if (isExpired) "Code Expired" else "Expires in: $timeRemaining",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -268,6 +282,18 @@ fun InviteCodeCard(
                 )
             }
             
+            Spacer(Modifier.height(24.dp))
+
+            Text("Set Expiration Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DurationChip(label = "1h", value = 1L, selected = selectedDuration == 1L) { onDurationChange(it) }
+                DurationChip(label = "12h", value = 12L, selected = selectedDuration == 12L) { onDurationChange(it) }
+                DurationChip(label = "24h", value = 24L, selected = selectedDuration == 24L) { onDurationChange(it) }
+                DurationChip(label = "7d", value = 168L, selected = selectedDuration == 168L) { onDurationChange(it) }
+            }
+
             Spacer(Modifier.height(24.dp))
             
             Button(
@@ -281,11 +307,25 @@ fun InviteCodeCard(
                 } else {
                     Icon(Icons.Outlined.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Generate New Code", fontWeight = FontWeight.Bold)
+                    Text("Refresh Code", fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
+}
+
+@Composable
+fun DurationChip(label: String, value: Long, selected: Boolean, onClick: (Long) -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = { onClick(value) },
+        label = { Text(label) },
+        shape = CircleShape,
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
 }
 
 @Composable
@@ -313,6 +353,14 @@ fun StaffSkeletonList() {
 
 @Composable
 fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
+    val joinDate = remember(member.createdAt) {
+        if (member.createdAt != null) {
+            SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(member.createdAt.toDate())
+        } else {
+            "Unknown"
+        }
+    }
+
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -340,7 +388,7 @@ fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(member.fullName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(member.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Joined: $joinDate", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = { onRemove(member) }) {
                 Icon(Icons.Outlined.PersonRemove, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))

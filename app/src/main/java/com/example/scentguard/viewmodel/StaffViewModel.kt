@@ -6,9 +6,12 @@ import com.example.scentguard.data.model.Restaurant
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class StaffViewModel(
     private val userRepository: UserRepository
@@ -25,6 +28,41 @@ class StaffViewModel(
 
     private val _removalState = MutableStateFlow<Resource<Unit>>(Resource.Idle())
     val removalState: StateFlow<Resource<Unit>> = _removalState
+
+    private val _timeRemaining = MutableStateFlow("")
+    val timeRemaining: StateFlow<String> = _timeRemaining
+
+    init {
+        startTimer()
+    }
+
+    private fun startTimer() {
+        viewModelScope.launch {
+            while (isActive) {
+                updateCountdown()
+                delay(1000 * 60) // Update every minute
+            }
+        }
+    }
+
+    private fun updateCountdown() {
+        val restaurant = (_restaurantInfo.value as? Resource.Success)?.data
+        val expiry = restaurant?.inviteCodeExpiresAt?.toDate()
+        
+        if (expiry == null) {
+            _timeRemaining.value = ""
+            return
+        }
+
+        val diff = expiry.time - System.currentTimeMillis()
+        if (diff <= 0) {
+            _timeRemaining.value = "Expired"
+        } else {
+            val hours = TimeUnit.MILLISECONDS.toHours(diff)
+            val minutes = TimeUnit.MILLISECONDS.toMinutes(diff) % 60
+            _timeRemaining.value = String.format("%02dh %02dm", hours, minutes)
+        }
+    }
 
     fun fetchStaff(restaurantId: String) {
         viewModelScope.launch {
@@ -45,6 +83,7 @@ class StaffViewModel(
             result.onSuccess { restaurant ->
                 if (restaurant != null) {
                     _restaurantInfo.value = Resource.Success(restaurant)
+                    updateCountdown()
                 } else {
                     _restaurantInfo.value = Resource.Error("Restaurant not found")
                 }
@@ -54,10 +93,10 @@ class StaffViewModel(
         }
     }
 
-    fun refreshInviteCode(restaurantId: String) {
+    fun refreshInviteCode(restaurantId: String, durationHours: Long = 24) {
         viewModelScope.launch {
             _isRefreshingCode.value = true
-            val result = userRepository.refreshInviteCode(restaurantId)
+            val result = userRepository.refreshInviteCode(restaurantId, durationHours)
             if (result.isSuccess) {
                 fetchRestaurantInfo(restaurantId)
             }

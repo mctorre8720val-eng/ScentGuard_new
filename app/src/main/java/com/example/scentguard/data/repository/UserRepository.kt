@@ -90,23 +90,27 @@ class UserRepository(
      * Retrieves a restaurant by its unique invitation code.
      */
     suspend fun getRestaurantByInviteCode(inviteCode: String): Result<Restaurant?> {
-        Log.d(TAG, "Checking invite code: $inviteCode")
+        val uppercaseCode = inviteCode.uppercase()
+        Log.d(TAG, "Checking invite code: $uppercaseCode")
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
             val query = withTimeout(TIMEOUT_MS) {
                 db.collection("restaurants")
-                    .whereEqualTo("inviteCode", inviteCode.uppercase())
+                    .whereEqualTo("inviteCode", uppercaseCode)
                     .get()
                     .await()
             }
             
             if (query.isEmpty) {
-                Log.w(TAG, "No restaurant found for code: $inviteCode")
+                Log.w(TAG, "No restaurant found for code: $uppercaseCode")
                 return Result.success(null)
             }
 
+            val doc = query.documents.firstOrNull()
+            Log.d(TAG, "Restaurant document found: \${doc?.id}")
+            
             val restaurant = try {
-                query.documents.firstOrNull()?.toObject(Restaurant::class.java)
+                doc?.toObject(Restaurant::class.java)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse Restaurant object", e)
                 null
@@ -115,15 +119,17 @@ class UserRepository(
             // Check for expiration
             if (restaurant != null) {
                 val expiry = restaurant.inviteCodeExpiresAt
-                if (expiry != null && expiry.toDate().before(Date())) {
-                    Log.w(TAG, "Invite code $inviteCode has expired")
+                val now = Date()
+                Log.d(TAG, "Code expiry: \${expiry?.toDate()}, Current time: \$now")
+                if (expiry != null && expiry.toDate().before(now)) {
+                    Log.w(TAG, "Invite code \$uppercaseCode has expired")
                     return Result.failure(Exception("Invite code has expired"))
                 }
             }
             
             Result.success(restaurant)
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching restaurant by code: $inviteCode", e)
+            Log.e(TAG, "Error fetching restaurant by code: \$uppercaseCode", e)
             Result.failure(e)
         }
     }
@@ -133,12 +139,15 @@ class UserRepository(
      */
     suspend fun getStaffByRestaurant(restaurantId: String): Result<List<UserProfile>> {
         Log.d(TAG, "Fetching staff for restaurant ID: $restaurantId")
+        if (restaurantId.isBlank()) {
+            return Result.failure(Exception("Restaurant ID is missing"))
+        }
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
             val query = withTimeout(TIMEOUT_MS) {
                 db.collection("users")
                     .whereEqualTo("restaurantId", restaurantId)
-                    .whereEqualTo("role", "Staff")
+                    .whereEqualTo("role", "STAFF") // Standardized to uppercase
                     .get()
                     .await()
             }
@@ -154,7 +163,12 @@ class UserRepository(
             Result.success(staff)
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching staff for restaurant $restaurantId", e)
-            Result.failure(e)
+            val errorMessage = if (e.message?.contains("permission-denied", ignoreCase = true) == true) {
+                "Permission Denied: Please apply the new Firestore Rules provided in the plan."
+            } else {
+                e.message ?: "Unknown database error"
+            }
+            Result.failure(Exception(errorMessage))
         }
     }
 
@@ -206,12 +220,12 @@ class UserRepository(
         }
     }
 
-    suspend fun refreshInviteCode(restaurantId: String): Result<String> {
-        Log.d(TAG, "Refreshing invite code for restaurant: $restaurantId")
+    suspend fun refreshInviteCode(restaurantId: String, durationHours: Long = 24): Result<String> {
+        Log.d(TAG, "Refreshing invite code for restaurant: $restaurantId with duration: $durationHours hours")
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
             val newCode = generateInviteCode()
-            val newExpiry = Timestamp(Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24)))
+            val newExpiry = Timestamp(Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(durationHours)))
             
             withTimeout(TIMEOUT_MS) {
                 db.collection("restaurants").document(restaurantId).update(

@@ -1,29 +1,25 @@
-# Walkthrough - Expiring Invite Codes & Staff Management
+# Walkthrough - Staff Management & Consistency Fixes
 
-I have implemented the professional invitation system with code expiration and the enhanced staff management dashboard for managers.
+I have resolved the permission errors, fixed the display bugs, and implemented the custom expiration feature for invitation codes.
 
-## Key Features Implemented
+## Key Fixes & Features
 
-### 1. Expiring Invitation System
-- **Time-Limited Access:** Every restaurant invitation code now has a built-in **24-hour expiration**. This ensures that old codes cannot be used by unauthorized personnel.
-- **Backend Enforcement:** The `UserRepository` now automatically rejects any registration attempt using an expired code.
-- **Manager Refresh:** Managers can instantly generate a **fresh 6-character code** from the Staff screen, which resets the 24-hour timer.
+### 1. Data Consistency & Permissions
+- **Uppercase Standardization:** Standardized all role checks and queries to use uppercase (`MANAGER`, `STAFF`). This ensures that the application's logic matches the Firestore security rules perfectly.
+- **Enhanced Error Messages:** If a permission issue occurs (e.g., if the rules haven't been updated yet), the app will now explicitly tell you: **"Permission Denied: Please apply the new Firestore Rules provided in the plan."**
+- **Robust Staff Query:** Fixed a logic gap in [UserRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/UserRepository.kt) where it was looking for "Staff" instead of "STAFF".
 
-### 2. Enhanced Staff Management
-- **Live Staff List:** Managers can now see a real-time list of all employees linked to their restaurant, including names and emails.
-- **Secure Removal:** I've added a **"Remove Staff"** action. Managers can kick any staff member from the restaurant's workspace.
-- **Safety Dialogs:** To prevent accidents, a confirmation dialog now appears before any staff member is removed.
-- **Instant Revocation:** Once removed, a staff member immediately loses access to all restaurant-specific data (Devices, Logs, Reports).
+### 2. Live Expiration System
+- **Countdown Display:** Fixed the bug where the timer was showing as a literal variable name. It now correctly displays the live time remaining (e.g., "01h 45m").
+- **Live Updates:** Added a timer to the [StaffViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/StaffViewModel.kt) that refreshes the countdown every minute while the screen is active.
 
-### 3. Role-Based UI Hardening
-- **Drawer Visibility:** The "Staff" management and "Reports" menu items are now strictly controlled by the `MANAGER` role check, using standardized uppercase comparison to prevent bugs.
-- **Visual Feedback:** The Staff screen now features a "Timer Badge" showing exactly how much time is left before the current code expires.
+### 3. Manager Controls
+- **Custom Expiration:** Managers can now select the duration of an invitation code before generating it. Options include **1h, 12h, 24h, and 7d**.
+- **Staff List:** Verified the Manager's ability to view all staff members and remove them with a secure confirmation dialog.
 
-## Technical Details
-- **Data Model:** Updated `Restaurant` model with `inviteCodeExpiresAt`.
-- **Logic:** Integrated `SessionManager` and `AuthRepository` to ensure the session remains synced with these permission changes.
-- **UI:** Used Material 3 `AlertDialog` for a professional, native look during staff removal.
+## Mandatory Step
+To permanently fix the "Permission Denied" error, please update your Firestore rules in the **Firebase Console** as described in the [Implementation Plan](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/implementation_plan.artifact.md).
 
 ---
 > [!TIP]
-> **Check it out:** Go to the **Staff** section in your navigation drawer (if logged in as Manager) to see the new live timer and refresh your invitation code!
+> **Test the Expiry:** Pick the "1h" duration and refresh the code. You should see the timer start immediately at "01h 00m".
