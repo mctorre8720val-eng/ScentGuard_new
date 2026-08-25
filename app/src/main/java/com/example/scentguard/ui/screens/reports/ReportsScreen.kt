@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -131,6 +132,8 @@ fun ReportsScreen(
                                             .tabIndicatorOffset(tabPositions[selectedTab])
                                             .fillMaxHeight()
                                             .padding(4.dp)
+                                            // Ensure the indicator is behind the text
+                                            .zIndex(-1f)
                                             .background(MaterialTheme.colorScheme.surface, CircleShape)
                                             .shadow(2.dp, CircleShape)
                                     )
@@ -143,9 +146,14 @@ fun ReportsScreen(
                                     selectedTab = 0 
                                     viewModel.fetchDailyReport()
                                 },
-                                text = { Text("Daily", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
+                                text = { 
+                                    Text(
+                                        text = "Daily", 
+                                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium
+                                    ) 
+                                },
                                 selectedContentColor = MaterialTheme.colorScheme.primary,
-                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                             Tab(
                                 selected = selectedTab == 1,
@@ -153,9 +161,14 @@ fun ReportsScreen(
                                     selectedTab = 1 
                                     viewModel.fetchWeeklyReport()
                                 },
-                                text = { Text("Weekly", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
+                                text = { 
+                                    Text(
+                                        text = "Weekly", 
+                                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium
+                                    ) 
+                                },
                                 selectedContentColor = MaterialTheme.colorScheme.primary,
-                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
                     }

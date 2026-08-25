@@ -1,19 +1,21 @@
-# Walkthrough - Google Icon Integration
+# Walkthrough - Analytics Tab Visibility Fix
 
-I have successfully added the official Google "G" icon to your login button, giving the authentication screen a more professional and recognizable appearance.
+I have resolved the visual bug in the **Reports & Analytics** screen where the active tab selection was obscuring the text.
 
 ## Changes Made
 
-### 1. Branded Vector Asset
-- **[ic_google_logo.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/res/drawable/ic_google_logo.xml)**: Created a high-resolution vector drawable using the official Google brand colors (Red, Yellow, Green, and Blue). This ensures the icon stays crisp on any screen density.
+### 1. Tab Indicator Layering
+- **[ReportsScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/reports/ReportsScreen.kt)**: Applied `Modifier.zIndex(-1f)` to the selection indicator (the white pill).
+- **Why this fixed it:** By default, the `TabRow` indicator is drawn *after* the tabs, which placed it on top of the text. Pushing it to a lower Z-index ensures it remains behind the text, allowing the primary green color and bold weight of the selected tab to shine through.
 
-### 2. Button UI Refinement
-- **[GoogleButton.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/GoogleButton.kt)**: Updated the button layout to include a `Row` that perfectly aligns the new "G" icon with the "Sign in with Google" text. I've maintained the 12dp spacing and 20dp icon size for a balanced, modern look.
+### 2. Contrast Refinement
+- Updated the `unselectedContentColor` to use a slightly more muted alpha (0.6f). This creates a clearer visual hierarchy between the active "Pill" state and the inactive background state.
 
-## Safety & Integrity
-- **Zero Logic Changes**: I have verified that no changes were made to the `CredentialManager` logic, the `Firebase Auth` backend, or the redirection flows.
-- **Loading Preservation**: The button still correctly switches to a `CircularProgressIndicator` during the authentication process to provide clear user feedback.
+## Verification
+- ✅ **Daily Tab:** When clicked, the white pill slides behind the "Daily" text, which turns Bold Green.
+- ✅ **Weekly Tab:** When clicked, the white pill slides behind the "Weekly" text, which turns Bold Green.
+- ✅ **Interactive Polish:** The transition remains smooth and the text is perfectly legible at all times.
 
 ---
-> [!TIP]
-> **Check it out:** The new icon is automatically visible on your **Login screen**. It follows the same adaptive UI principles as the rest of the app, staying centered and proportional on all devices.
+> [!SUCCESS]
+> **Conclusion:** The Analytics tabs now behave like a premium Material 3 component, providing clear and high-contrast feedback for user selection.
