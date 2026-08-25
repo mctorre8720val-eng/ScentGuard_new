@@ -1,27 +1,19 @@
-# Walkthrough - Activity Diagram (Section 3.2.6)
+# Walkthrough - Google Icon Integration
 
-I have successfully generated the **Activity Diagram** for your capstone paper. This diagram illustrates the complete logical lifecycle of ScentGuard, from raw sensor detection to real-time app updates and manual overrides.
+I have successfully added the official Google "G" icon to your login button, giving the authentication screen a more professional and recognizable appearance.
 
-## Key Logical Flows Illustrated
+## Changes Made
 
-### 1. The Autonomous Safety Cycle
-- **Detection:** Sensors constantly read PPM (gas) and Temp.
-- **Decision:** If the mode is set to **AUTO**, the system automatically evaluates gas levels against safety thresholds.
-- **Response:** If levels are hazardous, the system triggers the physical fan and generates a push alert simultaneously.
+### 1. Branded Vector Asset
+- **[ic_google_logo.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/res/drawable/ic_google_logo.xml)**: Created a high-resolution vector drawable using the official Google brand colors (Red, Yellow, Green, and Blue). This ensures the icon stays crisp on any screen density.
 
-### 2. The Real-time Sync Path
-- **Observation:** The Android app uses a "Snapshot Listener" to watch for changes in the cloud document.
-- **UI Update:** As data flows from the sensors to the cloud, the app's dashboard (Gauge and Aura) updates instantly without user refresh.
+### 2. Button UI Refinement
+- **[GoogleButton.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/GoogleButton.kt)**: Updated the button layout to include a `Row` that perfectly aligns the new "G" icon with the "Sign in with Google" text. I've maintained the 12dp spacing and 20dp icon size for a balanced, modern look.
 
-### 3. The Managerial Override
-- **Control:** Managers can bypass automated logic to force the fan **ON** or **OFF**.
-- **Execution:** The command is written to Firestore, where the ESP32 hardware detects it and executes the relay toggle within seconds.
-
-## Deliverables
-
-- **[scentguard_activity_diagram.svg](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_activity_diagram.svg)**: A high-resolution, three-swimlane diagram (Hardware, Cloud, App) for visual documentation.
-- **[scentguard_activity_mermaid.md](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_activity_mermaid.md)**: The Mermaid.js source code for dynamic rendering and future edits.
+## Safety & Integrity
+- **Zero Logic Changes**: I have verified that no changes were made to the `CredentialManager` logic, the `Firebase Auth` backend, or the redirection flows.
+- **Loading Preservation**: The button still correctly switches to a `CircularProgressIndicator` during the authentication process to provide clear user feedback.
 
 ---
 > [!TIP]
-> **For your Panel Defense:** Use this diagram to explain how ScentGuard maintains a **Continuous Feedback Loop**. It proves that the system is not just "reading" data, but actively "responding" to environmental changes.
+> **Check it out:** The new icon is automatically visible on your **Login screen**. It follows the same adaptive UI principles as the rest of the app, staying centered and proportional on all devices.

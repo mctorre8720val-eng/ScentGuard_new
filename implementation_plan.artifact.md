@@ -1,44 +1,28 @@
-# Implementation Plan - Use Case Diagram (Section 3.2.5)
+# Implementation Plan - Add Google Icon to Login Button
 
-This plan outlines the design and generation of the ScentGuard Use Case Diagram, ensuring it accurately represents the roles and functional requirements implemented in the application.
+This plan details the addition of the official Google "G" icon to the existing Google Sign-In button on the Login screen, ensuring a professional and branded appearance without altering any underlying logic.
 
-## Proposed Use Case Model
+## User Review Required
 
-### Actors
-1.  **Restaurant Manager (Primary Actor):** High-level user who manages the workspace.
-2.  **Restaurant Staff (Primary Actor):** Operational user who monitors the environment.
-3.  **ScentGuard Hardware (External Actor):** The physical unit that provides sensor telemetry.
-
-### Use Cases
-- **UC1: Account Management**: Login, Logout, Profile setup.
-- **UC2: Restaurant Setup**: Create restaurant profile (Manager).
-- **UC3: Staff Enrollment**: Join restaurant via invitation code (Staff).
-- **UC4: Real-time Monitoring**: View PPM levels, temperature, and breathing aura (Both).
-- **UC5: Manual Fan Control**: Force Fan ON/OFF (Manager).
-- **UC6: Smart Automation**: System-led ventilation based on PPM thresholds (System Internal).
-- **UC7: Staff Management**: Review and remove staff members (Manager).
-- **UC8: Data Analytics**: View daily/weekly air quality reports (Manager).
-- **UC9: System Audit**: View historical logs and notifications (Both).
-
-### Logical Boundaries
-- **System Boundary:** The ScentGuard Cloud-Mobile Ecosystem.
-- **Relationships:** Showing "Include" for auth and "Extend" for alerts where appropriate.
-
----
+> [!NOTE]
+> I am adding a new vector resource `ic_google_logo.xml` and updating the `GoogleButton` component to display it. No functional changes will be made to the authentication flow.
 
 ## Proposed Changes
 
-### 1. Documentation
-#### [NEW] [scentguard_use_case_diagram.svg](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_use_case_diagram.svg)
-- Generate a professional SVG diagram with clear Actor/System boundaries.
+### 1. Resources
+#### [NEW] [ic_google_logo.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/res/drawable/ic_google_logo.xml)
+- Add a new vector drawable containing the official Google "G" logo with its four brand colors (Red, Yellow, Green, Blue).
 
-#### [NEW] [scentguard_use_case_mermaid.md](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_use_case_mermaid.md)
-- Provide the Mermaid code for the Use Case diagram.
+### 2. UI Components
+#### [MODIFY] [GoogleButton.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/GoogleButton.kt)
+- Update the button content to include an `Image` composable before the "Sign in with Google" text.
+- Use `Row` for proper horizontal alignment and spacing (12dp) between the icon and the label.
 
 ---
 
 ## Verification Plan
 
 ### Manual Verification
-- **Role Accuracy:** Cross-check with `ScentGuardNavigationDrawer.kt` to ensure Manager-only features are correctly mapped to the Manager actor.
-- **Functional Check:** Ensure "Manual Fan Control" and "Invite Codes" are represented as they are core to the multi-role system.
+- **Visual Check:** Open the Login screen and verify that the "Sign in with Google" button now displays the multi-colored Google "G" icon.
+- **Loading State:** Ensure the icon is replaced by the `CircularProgressIndicator` when the button is in its loading state.
+- **Functionality:** Click the button to confirm it still triggers the Google account picker as expected.
