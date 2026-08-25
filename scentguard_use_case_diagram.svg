@@ -1,0 +1,91 @@
+<svg width="1000" height="800" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .actor-box { fill: none; stroke: none; }
+    .actor-line { stroke: #333; stroke-width: 2; fill: none; }
+    .system-box { fill: #f8f9fa; stroke: #34c759; stroke-width: 3; }
+    .use-case { fill: #ffffff; stroke: #333; stroke-width: 1.5; }
+    .text-main { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+    .text-title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: bold; text-anchor: middle; }
+    .text-actor { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; text-anchor: middle; }
+    .association { stroke: #555; stroke-width: 1; fill: none; }
+  </style>
+
+  <!-- Title -->
+  <text x="500" y="40" class="text-title">Figure 6: Use Case Diagram for ScentGuard</text>
+
+  <!-- System Boundary -->
+  <rect x="250" y="80" width="500" height="650" rx="10" class="system-box" />
+  <text x="500" y="110" class="text-main" font-weight="bold" fill="#34c759">SCENTGUARD SYSTEM</text>
+
+  <!-- Use Cases (Ovals) -->
+  <ellipse cx="500" cy="160" rx="140" ry="30" class="use-case" />
+  <text x="500" y="165" class="text-main">UC1: Account Management</text>
+
+  <ellipse cx="500" cy="230" rx="140" ry="30" class="use-case" />
+  <text x="500" y="235" class="text-main">UC2: Create Restaurant Profile</text>
+
+  <ellipse cx="500" cy="300" rx="140" ry="30" class="use-case" />
+  <text x="500" y="305" class="text-main">UC3: Join via Invite Code</text>
+
+  <ellipse cx="500" cy="370" rx="140" ry="30" class="use-case" />
+  <text x="500" y="375" class="text-main">UC4: Real-time Monitoring</text>
+
+  <ellipse cx="500" cy="440" rx="140" ry="30" class="use-case" />
+  <text x="500" y="445" class="text-main">UC5: Manual Fan Override</text>
+
+  <ellipse cx="500" cy="510" rx="140" ry="30" class="use-case" />
+  <text x="500" y="515" class="text-main">UC6: Staff Management</text>
+
+  <ellipse cx="500" cy="580" rx="140" ry="30" class="use-case" />
+  <text x="500" y="585" class="text-main">UC7: Data Analytics &amp; Reports</text>
+
+  <ellipse cx="500" cy="650" rx="140" ry="30" class="use-case" />
+  <text x="500" y="655" class="text-main">UC8: System Logs &amp; Alerts</text>
+
+  <!-- Actor: Manager (Left Top) -->
+  <g transform="translate(100, 200)">
+    <circle cx="0" cy="0" r="15" class="actor-line" /> <!-- Head -->
+    <line x1="0" y1="15" x2="0" y2="50" class="actor-line" /> <!-- Body -->
+    <line x1="-20" y1="25" x2="20" y2="25" class="actor-line" /> <!-- Arms -->
+    <line x1="0" y1="50" x2="-15" y2="80" class="actor-line" /> <!-- Left Leg -->
+    <line x1="0" y1="50" x2="15" y2="80" class="actor-line" /> <!-- Right Leg -->
+    <text x="0" y="105" class="text-actor">RESTAURANT MANAGER</text>
+  </g>
+
+  <!-- Actor: Staff (Left Bottom) -->
+  <g transform="translate(100, 500)">
+    <circle cx="0" cy="0" r="15" class="actor-line" />
+    <line x1="0" y1="15" x2="0" y2="50" class="actor-line" />
+    <line x1="-20" y1="25" x2="20" y2="25" class="actor-line" />
+    <line x1="0" y1="50" x2="-15" y2="80" class="actor-line" />
+    <line x1="0" y1="50" x2="15" y2="80" class="actor-line" />
+    <text x="0" y="105" class="text-actor">RESTAURANT STAFF</text>
+  </g>
+
+  <!-- Actor: Hardware (Right Center) -->
+  <g transform="translate(900, 350)">
+    <rect x="-40" y="-40" width="80" height="80" class="use-case" />
+    <text x="0" y="-55" class="text-actor">ESP32 HARDWARE</text>
+    <path d="M -20 -10 L 20 -10 M -20 10 L 20 10 M 0 -20 L 0 20" stroke="#333" stroke-width="2" />
+  </g>
+
+  <!-- Associations: Manager -->
+  <line x1="120" y1="220" x2="360" y2="160" class="association" />
+  <line x1="120" y1="225" x2="360" y2="230" class="association" />
+  <line x1="120" y1="230" x2="360" y2="370" class="association" />
+  <line x1="120" y1="235" x2="360" y2="440" class="association" />
+  <line x1="120" y1="240" x2="360" y2="510" class="association" />
+  <line x1="120" y1="245" x2="360" y2="580" class="association" />
+  <line x1="120" y1="250" x2="360" y2="650" class="association" />
+
+  <!-- Associations: Staff -->
+  <line x1="120" y1="520" x2="360" y2="160" class="association" />
+  <line x1="120" y1="525" x2="360" y2="300" class="association" />
+  <line x1="120" y1="530" x2="360" y2="370" class="association" />
+  <line x1="120" y1="535" x2="360" y2="650" class="association" />
+
+  <!-- Associations: Hardware -->
+  <line x1="860" y1="370" x2="640" y2="370" class="association" />
+  <line x1="860" y1="380" x2="640" y2="440" class="association" />
+
+</svg>

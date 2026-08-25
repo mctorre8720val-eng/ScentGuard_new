@@ -1,33 +1,27 @@
-# Walkthrough - Modern Responsive UI Upgrade
+# Walkthrough - Activity Diagram (Section 3.2.6)
 
-I have completed the comprehensive responsive and adaptive UI upgrade for ScentGuard. The application now maintains consistent visual proportions and professional layouts across all Android device sizes, from small phones to large tablets.
+I have successfully generated the **Activity Diagram** for your capstone paper. This diagram illustrates the complete logical lifecycle of ScentGuard, from raw sensor detection to real-time app updates and manual overrides.
 
-## Key Enhancements
+## Key Logical Flows Illustrated
 
-### 1. Responsive Foundation & Tools
-- **[ModifierExtensions.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/utils/ModifierExtensions.kt)**: Fixed and implemented the `responsiveContainer(maxWidth)` modifier. This tool intelligently centers content and applies a maximum width, ensuring UI elements don't over-stretch on wide displays.
-- **Adaptive Components**:
-  - **ScentGuardButton**: Now features a hierarchy (Primary/Secondary) with max-width constraints (400dp/360dp) to maintain consistent physical proportions.
-  - **ScentGuardCard**: Optimized with adaptive horizontal logic and a standard 480dp max-width for component-specific content balance.
+### 1. The Autonomous Safety Cycle
+- **Detection:** Sensors constantly read PPM (gas) and Temp.
+- **Decision:** If the mode is set to **AUTO**, the system automatically evaluates gas levels against safety thresholds.
+- **Response:** If levels are hazardous, the system triggers the physical fan and generates a push alert simultaneously.
 
-### 2. Structural Screen Adaptation
-- **Dashboard Evolution**:
-  - **Compact**: Maintains a focused, single-column vertical stack.
-  - **Wide Screens (600dp+)**: Automatically transitions to a side-by-side layout where the **Air Quality Hero** sits next to **System Statistics**, utilizing horizontal space effectively without bloating component size.
-- **Login & Sign-Up**:
-  - Overhauled both screens to be perfectly centered on larger displays.
-  - Applied a 420-440dp max-width to the entire form container, providing a modern SaaS "Floating Card" look on wide phones and tablets.
-- **List Consistency**: Updated History, Staff, and Notification screens to use centered, proportional lists that feel balanced on any device.
+### 2. The Real-time Sync Path
+- **Observation:** The Android app uses a "Snapshot Listener" to watch for changes in the cloud document.
+- **UI Update:** As data flows from the sensors to the cloud, the app's dashboard (Gauge and Aura) updates instantly without user refresh.
 
-### 3. Professional Spacing & Rhythm
-- **8pt Grid Consistency**: Standardized padding and margins across the entire app (4dp, 8dp, 16dp, 24dp, 32dp tokens).
-- **Usability**: Ensured all touch targets remain physically consistent regardless of screen density or width.
+### 3. The Managerial Override
+- **Control:** Managers can bypass automated logic to force the fan **ON** or **OFF**.
+- **Execution:** The command is written to Firestore, where the ESP32 hardware detects it and executes the relay toggle within seconds.
 
-## Technical Details
-- **Architecture**: Used `BoxWithConstraints` for structural logic and custom modifiers for component-level constraints.
-- **Maintainability**: Centralized all responsive logic into reusable components and modifiers, avoiding duplicate layout code.
-- **Build Status**: Verified that the project builds successfully and passes all dependency checks.
+## Deliverables
+
+- **[scentguard_activity_diagram.svg](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_activity_diagram.svg)**: A high-resolution, three-swimlane diagram (Hardware, Cloud, App) for visual documentation.
+- **[scentguard_activity_mermaid.md](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_activity_mermaid.md)**: The Mermaid.js source code for dynamic rendering and future edits.
 
 ---
 > [!TIP]
-> **Testing Pro-tip:** Rotate your device or use a tablet emulator to see the Dashboard intelligently re-compose itself into a multi-column grid!
+> **For your Panel Defense:** Use this diagram to explain how ScentGuard maintains a **Continuous Feedback Loop**. It proves that the system is not just "reading" data, but actively "responding" to environmental changes.

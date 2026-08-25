@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.ScentGuardApplication
+import com.example.scentguard.data.model.Restaurant
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.data.model.UserSession
 import com.example.scentguard.data.repository.AuthRepository
@@ -31,6 +32,9 @@ class MainViewModel(
     private val _isUserAuthenticated = MutableStateFlow(authRepository.currentUser != null)
     val isUserAuthenticated: StateFlow<Boolean> = _isUserAuthenticated
 
+    private val _liveRestaurantData = MutableStateFlow<Restaurant?>(null)
+    val liveRestaurantData: StateFlow<Restaurant?> = _liveRestaurantData.asStateFlow()
+
     val userSession: StateFlow<UserSession?> = authRepository.userSession
 
     val currentUserEmail: String?
@@ -39,12 +43,34 @@ class MainViewModel(
     init {
         observeAuthState()
         loadLocalOnboardingStatus()
+        observeLiveRestaurantData()
         
         // Attempt to restore session if firebase user exists but session is null
         if (authRepository.currentUser != null && authRepository.userSession.value == null) {
             viewModelScope.launch {
                 authRepository.restoreSession()
             }
+        }
+    }
+
+    private fun observeLiveRestaurantData() {
+        viewModelScope.launch {
+            userSession.collectLatest { session ->
+                if (session != null) {
+                    userRepository.getRestaurantFlow(session.restaurantId).collect { restaurant ->
+                        _liveRestaurantData.value = restaurant
+                    }
+                } else {
+                    _liveRestaurantData.value = null
+                }
+            }
+        }
+    }
+
+    fun updateFanMode(mode: String) {
+        val session = userSession.value ?: return
+        viewModelScope.launch {
+            userRepository.updateFanMode(session.restaurantId, mode)
         }
     }
 

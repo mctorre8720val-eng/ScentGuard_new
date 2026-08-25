@@ -6,6 +6,9 @@ import com.example.scentguard.data.model.UserProfile
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.util.*
@@ -16,10 +19,51 @@ class UserRepository(
     private val firestoreProvider: () -> FirebaseFirestore = { FirebaseFirestore.getInstance() }
 ) {
     private val TAG = "UserRepository"
-    private val TIMEOUT_MS = 7000L // Reduced from 10s to 7s
+    private val TIMEOUT_MS = 7000L
 
     private val auth by lazy { try { authProvider() } catch (e: Exception) { null } }
     private val firestore by lazy { try { firestoreProvider() } catch (e: Exception) { null } }
+
+    /**
+     * Provides a real-time stream of the restaurant data.
+     */
+    fun getRestaurantFlow(restaurantId: String): Flow<Restaurant?> = callbackFlow {
+        val db = firestore ?: run {
+            close()
+            return@callbackFlow
+        }
+        
+        if (restaurantId.isBlank()) {
+            trySend(null)
+            return@callbackFlow
+        }
+
+        val listener = db.collection("restaurants").document(restaurantId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error listening to restaurant: $restaurantId", error)
+                    return@addSnapshotListener
+                }
+                
+                val restaurant = snapshot?.toObject(Restaurant::class.java)
+                trySend(restaurant)
+            }
+            
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Updates the fan mode for a restaurant.
+     */
+    suspend fun updateFanMode(restaurantId: String, mode: String): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("restaurants").document(restaurantId).update("fanMode", mode).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     /**
      * Saves user profile to Firestore.

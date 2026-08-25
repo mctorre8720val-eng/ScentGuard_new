@@ -5,8 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -31,8 +28,10 @@ import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Calendar
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +41,21 @@ fun DashboardScreen(
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
+    val liveData by mainViewModel.liveRestaurantData.collectAsState()
     
+    // Heartbeat logic: Consider "Online" if lastSeen is within 2 minutes
+    var isOnline by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(liveData?.lastSeen) {
+        val lastSeenDate = liveData?.lastSeen?.toDate()
+        if (lastSeenDate == null) {
+            isOnline = false
+        } else {
+            val diffMs = System.currentTimeMillis() - lastSeenDate.time
+            isOnline = diffMs < TimeUnit.MINUTES.toMillis(2)
+        }
+    }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -114,29 +127,49 @@ fun DashboardScreen(
                                 horizontalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
                                 Box(modifier = Modifier.weight(1.2f)) {
-                                    AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
+                                    AirQualityHero(
+                                        gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
+                                        onViewAnalytics = { navController.navigate(Screen.Reports.route) }
+                                    )
                                 }
                                 Box(modifier = Modifier.weight(0.8f)) {
-                                    StatisticsSection()
+                                    StatisticsSection(isOnline = isOnline)
                                 }
                             }
                         }
                     } else {
                         item {
-                            AirQualityHero(onViewAnalytics = { navController.navigate(Screen.Reports.route) })
+                            AirQualityHero(
+                                gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
+                                onViewAnalytics = { navController.navigate(Screen.Reports.route) }
+                            )
                         }
                         item {
-                            StatisticsSection()
+                            StatisticsSection(isOnline = isOnline)
                         }
                     }
                     
                     item {
-                        MetricsGrid(isWideScreen)
+                        MetricsGrid(
+                            isWideScreen = isWideScreen,
+                            gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
+                            temp = if (isOnline) liveData?.temperature ?: 0f else 0f,
+                            isOnline = isOnline
+                        )
                     }
 
                     if (user?.role?.uppercase() == "MANAGER") {
                         item {
-                            ScentGuardFanControl()
+                            ScentGuardFanControl(
+                                initialMode = when(liveData?.fanMode?.uppercase()) {
+                                    "ON" -> com.example.scentguard.ui.components.FanMode.ON
+                                    "OFF" -> com.example.scentguard.ui.components.FanMode.OFF
+                                    else -> com.example.scentguard.ui.components.FanMode.AUTO
+                                },
+                                onModeChange = { mode -> 
+                                    mainViewModel.updateFanMode(mode.name)
+                                }
+                            )
                         }
                     }
                     
@@ -215,7 +248,10 @@ fun DashboardHeader(user: UserProfile?) {
 }
 
 @Composable
-fun AirQualityHero(onViewAnalytics: () -> Unit) {
+fun AirQualityHero(
+    gasLevel: Int,
+    onViewAnalytics: () -> Unit
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "aura")
     val auraScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -235,6 +271,24 @@ fun AirQualityHero(onViewAnalytics: () -> Unit) {
         ),
         label = "alpha"
     )
+
+    val status = remember(gasLevel) {
+        when {
+            gasLevel == 0 -> "Standby"
+            gasLevel < 200 -> "Good"
+            gasLevel < 400 -> "Moderate"
+            else -> "Poor"
+        }
+    }
+
+    val statusColor = remember(gasLevel) {
+        when {
+            gasLevel == 0 -> Color.Gray
+            gasLevel < 200 -> Color(0xFF34C759)
+            gasLevel < 400 -> Color(0xFFFF9500)
+            else -> Color(0xFFFF3B30)
+        }
+    }
 
     Surface(
         onClick = onViewAnalytics,
@@ -262,27 +316,27 @@ fun AirQualityHero(onViewAnalytics: () -> Unit) {
                     modifier = Modifier
                         .size(140.dp)
                         .scale(auraScale)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = auraAlpha), CircleShape)
+                        .background(statusColor.copy(alpha = auraAlpha), CircleShape)
                 )
 
                 CircularProgressIndicator(
-                    progress = { 0.85f },
+                    progress = { (gasLevel / 1000f).coerceIn(0f, 1f) },
                     modifier = Modifier.size(180.dp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = statusColor,
                     strokeWidth = 10.dp,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                    trackColor = statusColor.copy(alpha = 0.05f),
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
                 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Good",
+                        text = status,
                         style = MaterialTheme.typography.displayLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = statusColor
                     )
                     Text(
-                        "185 ppm",
+                        text = "$gasLevel ppm",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -296,21 +350,32 @@ fun AirQualityHero(onViewAnalytics: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Outlined.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Icon(
+                    if (gasLevel == 0) Icons.Outlined.PowerSettingsNew else if (gasLevel < 400) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                    null, 
+                    tint = statusColor, 
+                    modifier = Modifier.size(20.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Optimized ventilation", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = if (gasLevel == 0) "Awaiting sensor data..." else if (gasLevel < 400) "Optimized ventilation" else "Ventilation recommended",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
 }
 
 @Composable
-fun MetricsGrid(isWideScreen: Boolean) {
-    val columns = if (isWideScreen) 4 else 2
-    
+fun MetricsGrid(
+    isWideScreen: Boolean,
+    gasLevel: Int,
+    temp: Float,
+    isOnline: Boolean
+) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Real-time Metrics",
+            "Hardware Status",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -318,33 +383,27 @@ fun MetricsGrid(isWideScreen: Boolean) {
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             MetricCard(
-                label = "Room Temp",
-                value = "28",
+                label = "System Temp",
+                value = temp.toInt().toString(),
                 unit = "°C",
                 icon = Icons.Outlined.Thermostat,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
-                label = "Unit Temp",
-                value = "32",
-                unit = "°C",
-                icon = Icons.Outlined.Memory,
+                label = "Gas Level",
+                value = gasLevel.toString(),
+                unit = "ppm",
+                icon = Icons.Outlined.Cloud,
                 modifier = Modifier.weight(1f)
             )
             if (isWideScreen) {
                 MetricCard(
-                    label = "Gas Level",
-                    value = "185",
-                    unit = "ppm",
-                    icon = Icons.Outlined.Cloud,
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
-                    label = "Humidity",
-                    value = "64",
-                    unit = "%",
-                    icon = Icons.Outlined.WaterDrop,
-                    modifier = Modifier.weight(1f)
+                    label = "System Status",
+                    value = if (!isOnline) "OFFLINE" else if (gasLevel < 400) "OK" else "HIGH",
+                    unit = "",
+                    icon = Icons.Outlined.Sensors,
+                    modifier = Modifier.weight(1f),
+                    valueColor = if (!isOnline) MaterialTheme.colorScheme.error else if (gasLevel < 400) Color(0xFF34C759) else Color(0xFFFF3B30)
                 )
             }
         }
@@ -352,26 +411,31 @@ fun MetricsGrid(isWideScreen: Boolean) {
         if (!isWideScreen) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 MetricCard(
-                    label = "Gas Level",
-                    value = "185",
-                    unit = "ppm",
-                    icon = Icons.Outlined.Cloud,
-                    modifier = Modifier.weight(1f)
+                    label = "Sensor Unit",
+                    value = if (isOnline) "Online" else "Offline",
+                    unit = "",
+                    icon = Icons.Outlined.Memory,
+                    modifier = Modifier.weight(1f),
+                    valueStyle = MaterialTheme.typography.titleLarge,
+                    valueColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
                 )
-                MetricCard(
-                    label = "Humidity",
-                    value = "64",
-                    unit = "%",
-                    icon = Icons.Outlined.WaterDrop,
-                    modifier = Modifier.weight(1f)
-                )
+                // Spacer card to keep grid balanced
+                Box(modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-fun MetricCard(label: String, value: String, unit: String, icon: ImageVector, modifier: Modifier = Modifier) {
+fun MetricCard(
+    label: String, 
+    value: String, 
+    unit: String, 
+    icon: ImageVector, 
+    modifier: Modifier = Modifier,
+    valueStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.displayLarge,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(28.dp),
@@ -391,15 +455,17 @@ fun MetricCard(label: String, value: String, unit: String, icon: ImageVector, mo
             Spacer(modifier = Modifier.height(20.dp))
             Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
-                Text(unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = valueStyle, fontWeight = FontWeight.Bold, color = valueColor)
+                if (unit.isNotEmpty()) {
+                    Text(unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
 }
 
 @Composable
-fun StatisticsSection() {
+fun StatisticsSection(isOnline: Boolean) {
     Column {
         Text(
             "System performance",
@@ -409,14 +475,26 @@ fun StatisticsSection() {
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MiniStatCard("Alerts Today", "2", Icons.Outlined.WarningAmber, Modifier.fillMaxWidth())
-            MiniStatCard("Uptime", "99%", Icons.Outlined.Timer, Modifier.fillMaxWidth())
-            MiniStatCard("Status", "Online", Icons.Outlined.Sensors, Modifier.fillMaxWidth())
+            MiniStatCard("Uptime", if (isOnline) "99%" else "0%", Icons.Outlined.Timer, Modifier.fillMaxWidth())
+            MiniStatCard(
+                "Status", 
+                if (isOnline) "Online" else "Offline", 
+                Icons.Outlined.Sensors, 
+                Modifier.fillMaxWidth(),
+                statusColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
+            )
         }
     }
 }
 
 @Composable
-fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+fun MiniStatCard(
+    label: String, 
+    value: String, 
+    icon: ImageVector, 
+    modifier: Modifier = Modifier,
+    statusColor: Color = MaterialTheme.colorScheme.primary
+) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
@@ -428,10 +506,10 @@ fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modi
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(icon, null, modifier = Modifier.size(20.dp), tint = statusColor)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = statusColor)
                 Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

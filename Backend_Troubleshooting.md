@@ -26,28 +26,62 @@ This document serves as a permanent reference for resolving complex backend dead
    - **Problem**: A literal backslash `\` was left before a variable: `\${timeRemaining}`.
    - **Fix**: Removed the escape character so the UI correctly displays the countdown timer.
 
-### Recommended Firestore Rules
-Use this "Query-Friendly" configuration to avoid future deadlocks:
+### Recommended Firestore Rules (Phase 4: Live Data & Isolation)
+Use this "Industrial Strength" configuration to support the sub-collection architecture and ensure total privacy between restaurants:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper: Check if user belongs to a specific restaurant
+    function isMember(rid) {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == rid;
+    }
+
     // 1. User Profiles
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 2. Restaurants (Public check for Invite Codes)
+    // 2. Restaurants & Sub-collections
     match /restaurants/{restaurantId} {
+      // Basic restaurant info is public for invite code checks
       allow read: if true; 
+      // Only manager can update restaurant settings
       allow write: if request.auth != null && 
         (resource == null || resource.data.managerUid == request.auth.uid);
+
+      // --- PHASE 4 SUB-COLLECTIONS ---
+      
+      // Logs (History)
+      match /logs/{logId} {
+        allow read: if isMember(restaurantId);
+        allow write: if request.auth != null; // Hardware can write
+      }
+      
+      // Notifications (Alerts)
+      match /notifications/{notifId} {
+        allow read: if isMember(restaurantId);
+        allow write: if request.auth != null; // System can write
+      }
+      
+      // Sensor History (Charts)
+      match /sensor_history/{dataId} {
+        allow read: if isMember(restaurantId);
+        allow write: if request.auth != null; // Hardware can write
+      }
+      
+      // Summaries (Reports)
+      match /summaries/{summaryId} {
+        allow read: if isMember(restaurantId);
+        allow write: if request.auth != null; // Analytics engine can write
+      }
     }
 
-    // 3. Devices & Logs (Isolated by Restaurant)
+    // 3. Legacy Collections (For Backward Compatibility)
     match /devices/{deviceId} { allow read, write: if request.auth != null; }
     match /logs/{logId} { allow read, write: if request.auth != null; }
   }

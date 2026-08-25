@@ -1,7 +1,6 @@
 package com.example.scentguard.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,7 +26,8 @@ fun ScentGuardFanControl(
     initialMode: FanMode = FanMode.AUTO,
     onModeChange: (FanMode) -> Unit = {}
 ) {
-    var selectedMode by remember { mutableStateOf(initialMode) }
+    // Driven by parent state (liveData from Dashboard)
+    val selectedMode = initialMode
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -68,7 +68,7 @@ fun ScentGuardFanControl(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Current: ${selectedMode.name}",
+                        text = "Mode: ${selectedMode.name}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -85,36 +85,30 @@ fun ScentGuardFanControl(
                     label = "ON",
                     icon = Icons.Outlined.PowerSettingsNew,
                     isSelected = selectedMode == FanMode.ON,
+                    activeColor = Color(0xFF34C759), // Professional ScentGuard Green
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        selectedMode = FanMode.ON
                         onModeChange(FanMode.ON)
-                        // TODO: Phase 2 - Send "ON" command to Firebase Realtime Database
-                        // TODO: Phase 2 - ESP32 will listen for this change and activate relay
                     }
                 )
                 FanControlButton(
                     label = "OFF",
                     icon = Icons.Outlined.PowerSettingsNew,
                     isSelected = selectedMode == FanMode.OFF,
+                    activeColor = Color(0xFF8E8E93), // Professional Neutral Grey
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        selectedMode = FanMode.OFF
                         onModeChange(FanMode.OFF)
-                        // TODO: Phase 2 - Send "OFF" command to Firebase Realtime Database
-                        // TODO: Phase 2 - ESP32 will listen for this change and deactivate relay
                     }
                 )
                 FanControlButton(
                     label = "AUTO",
                     icon = Icons.Outlined.AutoMode,
                     isSelected = selectedMode == FanMode.AUTO,
+                    activeColor = Color(0xFF007AFF), // Intelligent Blue
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        selectedMode = FanMode.AUTO
                         onModeChange(FanMode.AUTO)
-                        // TODO: Phase 2 - Send "AUTO" command to Firebase Realtime Database
-                        // TODO: Phase 2 - ESP32 will handle ventilation logic based on sensor thresholds
                     }
                 )
             }
@@ -127,15 +121,16 @@ private fun FanControlButton(
     label: String,
     icon: ImageVector,
     isSelected: Boolean,
+    activeColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val containerColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        targetValue = if (isSelected) activeColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         label = "containerColor"
     )
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "contentColor"
     )
 
@@ -144,7 +139,8 @@ private fun FanControlButton(
         modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(16.dp),
         color = containerColor,
-        contentColor = contentColor
+        contentColor = contentColor,
+        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -156,7 +152,7 @@ private fun FanControlButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
             )
         }
     }

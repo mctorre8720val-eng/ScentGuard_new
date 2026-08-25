@@ -30,13 +30,13 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
                 SettingsViewModel(app) as T
             }
             modelClass.isAssignableFrom(HistoryViewModel::class.java) -> {
-                HistoryViewModel(app.historyRepository) as T
+                HistoryViewModel(app.historyRepository, app.authRepository) as T
             }
             modelClass.isAssignableFrom(NotificationViewModel::class.java) -> {
-                NotificationViewModel(app.notificationRepository) as T
+                NotificationViewModel(app.notificationRepository, app.authRepository) as T
             }
             modelClass.isAssignableFrom(ReportViewModel::class.java) -> {
-                ReportViewModel(app.reportRepository, app.chartRepository) as T
+                ReportViewModel(app.reportRepository, app.chartRepository, app.authRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: \${modelClass.name}")
         }

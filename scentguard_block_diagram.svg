@@ -1,0 +1,81 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .group-box { fill: none; stroke: #ccc; stroke-width: 1; stroke-dasharray: 5,5; }
+    .component-box { fill: #ffffff; stroke: #333333; stroke-width: 2; }
+    .header-box { fill: #f8f9fa; stroke: #333333; stroke-width: 2; }
+    .text-header { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #1a73e8; }
+    .text-body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+    .arrow { stroke: #333333; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .bidir-arrow { stroke: #333333; stroke-width: 1.5; fill: none; marker-start: url(#arrowhead); marker-end: url(#arrowhead); }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333333" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="40" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">Figure 4: ScentGuard System Block Diagram</text>
+
+  <!-- 1. INPUTS -->
+  <rect x="50" y="80" width="200" height="480" class="group-box" rx="10" />
+  <text x="150" y="105" class="text-header">INPUTS</text>
+
+  <rect x="70" y="150" width="160" height="60" rx="5" class="component-box" />
+  <text x="150" y="185" class="text-body">MQ-135 Gas Sensor</text>
+
+  <rect x="70" y="250" width="160" height="60" rx="5" class="component-box" />
+  <text x="150" y="285" class="text-body">DHT11 Temp Sensor</text>
+
+  <!-- 2. CONTROL -->
+  <rect x="300" y="80" width="200" height="480" class="group-box" rx="10" />
+  <text x="400" y="105" class="text-header">CONTROL</text>
+
+  <rect x="320" y="180" width="160" height="100" rx="5" class="component-box" fill="#e8f0fe" />
+  <text x="400" y="230" class="text-body" font-weight="bold">ESP32</text>
+  <text x="400" y="250" class="text-body">Microcontroller</text>
+
+  <!-- 3. CLOUD -->
+  <rect x="550" y="80" width="150" height="480" class="group-box" rx="10" />
+  <text x="625" y="105" class="text-header">CLOUD</text>
+
+  <path d="M 625 180
+           c -20 0 -30 15 -20 20
+           c -20 5 -10 30 15 25
+           c 5 15 40 15 45 0
+           c 25 5 30 -20 10 -25
+           c 10 -5 5 -20 -20 -20
+           Z" fill="#fff" stroke="#333" stroke-width="2" />
+  <text x="625" y="210" class="text-body" font-weight="bold">Firebase</text>
+
+  <!-- 4. OUTPUTS & INTERFACE -->
+  <rect x="750" y="80" width="200" height="480" class="group-box" rx="10" />
+  <text x="850" y="105" class="text-header">OUTPUTS</text>
+
+  <rect x="770" y="150" width="160" height="60" rx="5" class="component-box" />
+  <text x="850" y="185" class="text-body">Relay Module &amp; Fan</text>
+
+  <rect x="770" y="230" width="160" height="40" rx="5" class="component-box" />
+  <text x="850" y="255" class="text-body">Indicator LED</text>
+
+  <rect x="770" y="320" width="160" height="80" rx="5" class="component-box" fill="#e6fffa" />
+  <text x="850" y="360" class="text-body" font-weight="bold">Android App</text>
+  <text x="850" y="380" class="text-body">(User Interface)</text>
+
+  <!-- CONNECTIONS -->
+  <!-- Sensors to ESP32 -->
+  <line x1="230" y1="180" x2="320" y2="210" class="arrow" />
+  <line x1="230" y1="280" x2="320" y2="250" class="arrow" />
+
+  <!-- ESP32 to Firebase -->
+  <line x1="480" y1="220" x2="590" y2="210" class="bidir-arrow" />
+
+  <!-- Firebase to Android App -->
+  <path d="M 640 230 L 640 360 L 770 360" class="bidir-arrow" />
+
+  <!-- ESP32 to Physical Outputs -->
+  <line x1="480" y1="200" x2="770" y2="180" class="arrow" />
+  <line x1="480" y1="240" x2="770" y2="250" class="arrow" />
+
+</svg>

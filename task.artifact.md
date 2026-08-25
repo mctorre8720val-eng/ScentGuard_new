@@ -1,14 +1,11 @@
-# Task: Phase 4 - Live Data Connectivity
+# Task: Generate Use Case Diagram (Section 3.2.5)
 
-- `[ ]` **Phase 1: Real-time Dashboard**
-    - `[ ]` Implement `liveSensorData` listener in `MainViewModel.kt`
-    - `[ ]` Bind Dashboard UI to live data flow
-- `[ ]` **Phase 2: Live Repositories**
-    - `[ ]` Migrate `HistoryRepository` to live Firestore sub-collections
-    - `[ ]` Migrate `NotificationRepository` to live Firestore sub-collections
-    - `[ ]` Update `ChartRepository` to fetch from `sensor_history`
-- `[ ]` **Phase 3: Hardware Commands**
-    - `[ ]` Add `updateFanMode` to `UserRepository.kt`
-    - `[ ]` Connect `ScentGuardFanControl` UI to the backend logic
-- `[ ]` **Phase 4: Verification**
-    - `[ ]` Perform the "Ghost Hardware" manual test in Firebase Console
+- `[x]` **Phase 1: Functional Mapping**
+    - `[x]` Finalize list of Use Cases based on implemented code
+    - `[x]` Identify primary and external actors
+- `[x]` **Phase 2: Diagram Generation**
+    - `[x]` Create high-resolution SVG Use Case Diagram
+    - `[x]` Define Mermaid.js code block
+- `[x]` **Phase 3: Final Verification**
+    - `[x]` Verify diagram aligns with role-based access logic
+    - `[x]` Generate figure description for the paper

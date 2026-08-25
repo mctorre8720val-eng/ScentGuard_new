@@ -1,0 +1,100 @@
+<svg width="1000" height="900" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .lane-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 5,5; }
+    .box { fill: #fff; stroke: #333; stroke-width: 2; }
+    .decision { fill: #fff; stroke: #333; stroke-width: 2; }
+    .start-end { fill: #333; stroke: #333; }
+    .text-header { font-family: Arial; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #34c759; }
+    .text-body { font-family: Arial; font-size: 14px; text-anchor: middle; fill: #1A1C1E; }
+    .arrow { stroke: #333; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .label { font-family: Arial; font-size: 12px; fill: #666; text-anchor: middle; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="40" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">ScentGuard: System Activity Diagram</text>
+
+  <!-- Swimlane Headers -->
+  <text x="166" y="80" class="text-header">HARDWARE (ESP32)</text>
+  <text x="500" y="80" class="text-header" style="fill: #007AFF">CLOUD (FIREBASE)</text>
+  <text x="833" y="80" class="text-header">USER APP (ANDROID)</text>
+
+  <!-- Swimlane Dividers -->
+  <line x1="333" y1="90" x2="333" y2="850" class="lane-line" />
+  <line x1="666" y1="90" x2="666" y2="850" class="lane-line" />
+
+  <!-- Start -->
+  <circle cx="166" cy="120" r="10" class="start-end" />
+  <line x1="166" y1="130" x2="166" y2="160" class="arrow" />
+
+  <!-- 1. Read Sensors -->
+  <rect x="66" y="160" width="200" height="50" rx="10" class="box" />
+  <text x="166" y="190" class="text-body">Read MQ135 &amp; DHT11</text>
+
+  <line x1="166" y1="210" x2="166" y2="240" class="arrow" />
+
+  <!-- 2. Push Data -->
+  <rect x="66" y="240" width="200" height="50" rx="10" class="box" />
+  <text x="166" y="270" class="text-body">Push Data to Firestore</text>
+
+  <line x1="266" y1="265" x2="400" y2="265" class="arrow" />
+
+  <!-- 3. Update Document -->
+  <rect x="400" y="240" width="200" height="50" rx="10" class="box" />
+  <text x="500" y="270" class="text-body">Update Restaurant Doc</text>
+
+  <line x1="500" y1="290" x2="500" y2="330" class="arrow" />
+  <line x1="600" y1="265" x2="733" y2="265" class="arrow" />
+
+  <!-- 4. Sync UI -->
+  <rect x="733" y="240" width="200" height="50" rx="10" class="box" />
+  <text x="833" y="270" class="text-body">UI Real-time Sync</text>
+
+  <!-- 5. Logic Check -->
+  <polygon points="500,330 560,370 500,410 440,370" class="decision" />
+  <text x="500" y="375" class="text-body" font-size="12">Fan Mode?</text>
+
+  <!-- Path: Auto -->
+  <line x1="500" y1="410" x2="500" y2="460" class="arrow" />
+  <text x="520" y="435" class="label">AUTO</text>
+
+  <!-- 6. Threshold Check -->
+  <polygon points="500,460 560,500 500,540 440,500" class="decision" />
+  <text x="500" y="505" class="text-body" font-size="12">PPM > Limit?</text>
+
+  <!-- Path: High Gas -->
+  <line x1="500" y1="540" x2="500" y2="590" class="arrow" />
+  <text x="520" y="565" class="label">YES</text>
+
+  <rect x="400" y="590" width="200" height="50" rx="10" class="box" />
+  <text x="500" y="620" class="text-body">Trigger Alert &amp; Fan</text>
+
+  <line x1="400" y1="615" x2="266" y2="615" class="arrow" />
+
+  <!-- Path: Low Gas -->
+  <line x1="440" y1="500" x2="300" y2="500" class="arrow" />
+  <text x="370" y="490" class="label">NO</text>
+  <text x="210" y="505" class="text-body">Standby / Monitor</text>
+
+  <!-- Path: Manual -->
+  <line x1="833" y1="290" x2="833" y2="350" class="arrow" />
+  <rect x="733" y="350" width="200" height="50" rx="10" class="box" />
+  <text x="833" y="380" class="text-body">Manual Override Tap</text>
+
+  <line x1="733" y1="375" x2="560" y2="370" class="arrow" />
+  <text x="650" y="360" class="label">MANUAL</text>
+
+  <!-- 7. Relay Action -->
+  <rect x="66" y="590" width="200" height="50" rx="10" class="box" />
+  <text x="166" y="620" class="text-body">Physical Relay Toggled</text>
+
+  <!-- Loop back -->
+  <path d="M 166 640 L 166 800 L 40 800 L 40 185 L 66 185" class="arrow" />
+  <text x="100" y="790" class="label">Loop Monitoring</text>
+
+</svg>

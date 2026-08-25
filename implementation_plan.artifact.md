@@ -1,52 +1,44 @@
-# Implementation Plan - Phase 4: Live Data Connectivity
+# Implementation Plan - Use Case Diagram (Section 3.2.5)
 
-This plan outlines the technical migration from hardcoded "Demo" data to a live, real-time connection with Firebase Firestore, enabling multi-tenant isolation and active hardware commands.
+This plan outlines the design and generation of the ScentGuard Use Case Diagram, ensuring it accurately represents the roles and functional requirements implemented in the application.
 
-## User Review Required
+## Proposed Use Case Model
 
-> [!IMPORTANT]
-> **Data Collection Design:** This plan assumes a Firestore structure where each restaurant has its own logs and notifications.
-> **Real-time Cost:** Real-time listeners (Snapshots) stay active while the app is open. This provides the best UX but uses slightly more data/battery than one-shot fetches.
+### Actors
+1.  **Restaurant Manager (Primary Actor):** High-level user who manages the workspace.
+2.  **Restaurant Staff (Primary Actor):** Operational user who monitors the environment.
+3.  **ScentGuard Hardware (External Actor):** The physical unit that provides sensor telemetry.
 
-## Proposed Changes
+### Use Cases
+- **UC1: Account Management**: Login, Logout, Profile setup.
+- **UC2: Restaurant Setup**: Create restaurant profile (Manager).
+- **UC3: Staff Enrollment**: Join restaurant via invitation code (Staff).
+- **UC4: Real-time Monitoring**: View PPM levels, temperature, and breathing aura (Both).
+- **UC5: Manual Fan Control**: Force Fan ON/OFF (Manager).
+- **UC6: Smart Automation**: System-led ventilation based on PPM thresholds (System Internal).
+- **UC7: Staff Management**: Review and remove staff members (Manager).
+- **UC8: Data Analytics**: View daily/weekly air quality reports (Manager).
+- **UC9: System Audit**: View historical logs and notifications (Both).
 
-### 1. Real-time Sensor Bridge
-#### [MODIFY] [MainViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/MainViewModel.kt)
-- Create a `liveSensorData` StateFlow.
-- Implement a Firestore Snapshot Listener on `restaurants/{restaurantId}`.
-- Bind the Dashboard metrics (PPM, Temp, Humidity) to this flow.
-
-### 2. Live Repository Migration
-#### [MODIFY] [HistoryRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/HistoryRepository.kt)
-- Replace mock logic with: `db.collection("restaurants").document(rid).collection("logs").orderBy("timestamp", DESC)`.
-
-#### [MODIFY] [NotificationRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/NotificationRepository.kt)
-- Replace mock logic with a real-time flow from `restaurants/{rid}/notifications`.
-
-#### [MODIFY] [ChartRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/ChartRepository.kt)
-- Implement fetching the last 24 records from `restaurants/{rid}/sensor_history` to populate the trend chart.
-
-### 3. Active Command Logic (Fan Control)
-#### [MODIFY] [UserRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/UserRepository.kt)
-- Add `updateFanMode(restaurantId, mode)` function.
-- This will write to `restaurants/{rid}/fan_mode`, which the ESP32 hardware will observe.
-
-#### [MODIFY] [ScentGuardFanControl.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/ScentGuardFanControl.kt)
-- Link the UI buttons to the new `updateFanMode` logic via a ViewModel.
+### Logical Boundaries
+- **System Boundary:** The ScentGuard Cloud-Mobile Ecosystem.
+- **Relationships:** Showing "Include" for auth and "Extend" for alerts where appropriate.
 
 ---
 
-## Verification Plan (The "Ghost Hardware" Test)
+## Proposed Changes
+
+### 1. Documentation
+#### [NEW] [scentguard_use_case_diagram.svg](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_use_case_diagram.svg)
+- Generate a professional SVG diagram with clear Actor/System boundaries.
+
+#### [NEW] [scentguard_use_case_mermaid.md](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/scentguard_use_case_mermaid.md)
+- Provide the Mermaid code for the Use Case diagram.
+
+---
+
+## Verification Plan
 
 ### Manual Verification
-1.  **The Manual Pulse**:
-    - Go to **Firebase Console > Firestore**.
-    - Open your specific restaurant document.
-    - Manually change the `currentGasPpm` field.
-    - **Verification**: Confirm the Dashboard gauge in the app moves instantly.
-2.  **Log Injection**:
-    - Manually add a document to the `logs` sub-collection in Firebase.
-    - **Verification**: Confirm it appears in the "System Logs" screen without refreshing.
-3.  **Command Echo**:
-    - Tap "ON" in the app's Fan Control.
-    - **Verification**: Confirm the `fan_mode` field in Firestore updates to `"ON"`.
+- **Role Accuracy:** Cross-check with `ScentGuardNavigationDrawer.kt` to ensure Manager-only features are correctly mapped to the Manager actor.
+- **Functional Check:** Ensure "Manual Fan Control" and "Invite Codes" are represented as they are core to the multi-role system.

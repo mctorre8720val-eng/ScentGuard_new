@@ -1,0 +1,87 @@
+<svg width="1000" height="800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Styles -->
+  <style>
+    .box { fill: white; stroke: black; stroke-width: 1.5; }
+    .header { fill: #f2f2f2; stroke: black; stroke-width: 1.5; }
+    .text-header { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }
+    .text-body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; text-anchor: middle; }
+    .arrow { stroke: black; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .cloud-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+    .app-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }
+  </style>
+
+  <!-- Definitions -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+    </marker>
+  </defs>
+
+  <!-- 1. Sensor Data Box (Top Left) -->
+  <rect x="50" y="50" width="220" height="40" class="header" />
+  <text x="160" y="75" class="text-header">Sensor Data</text>
+  <rect x="50" y="90" width="220" height="80" class="box" />
+  <text x="160" y="125" class="text-body">MQ-135 Module</text>
+  <text x="160" y="155" class="text-body">DHT11 Module</text>
+
+  <!-- 2. Microcontroller Box (Top Center) -->
+  <rect x="380" y="50" width="220" height="40" class="header" />
+  <text x="490" y="75" class="text-header">Microcontroller</text>
+  <rect x="380" y="90" width="220" height="80" class="box" />
+  <text x="490" y="135" class="text-body">ESP32</text>
+
+  <!-- 3. Electricity Controlled Switch Box (Top Right) -->
+  <rect x="710" y="240" width="220" height="40" class="header" />
+  <text x="820" y="265" class="text-header">Electricity Controlled Switch</text>
+  <rect x="710" y="280" width="220" height="80" class="box" />
+  <text x="820" y="325" class="text-body">Relay Module</text>
+
+  <!-- 4. Outputs (Bottom Right) -->
+  <rect x="710" y="440" width="100" height="50" class="box" />
+  <text x="760" y="470" class="text-body">Exhaust</text>
+
+  <rect x="830" y="440" width="100" height="50" class="box" />
+  <text x="880" y="470" class="text-body" font-size="12">Indicator LED</text>
+
+  <!-- 5. Cloud Services (Center) -->
+  <path d="M 490 250
+           c -40 0 -50 30 -30 40
+           c -30 10 -20 60 20 50
+           c 10 30 70 30 80 0
+           c 40 10 50 -40 20 -50
+           c 20 -10 10 -40 -30 -40
+           Z" fill="white" stroke="black" stroke-width="1.5" />
+  <text x="490" y="305" class="cloud-text">ScentGuard Cloud Services</text>
+  <text x="490" y="325" class="cloud-text" font-style="italic">(Firebase)</text>
+
+  <!-- 6. Mobile App (Bottom Center) -->
+  <!-- Simple Phone Illustration -->
+  <rect x="445" y="500" width="90" height="180" rx="15" class="box" />
+  <rect x="455" y="520" width="70" height="140" rx="5" fill="#f9f9f9" stroke="#ddd" />
+  <circle cx="490" cy="510" r="2" fill="black" />
+  <circle cx="490" cy="670" r="5" fill="none" stroke="black" />
+
+  <text x="490" y="710" class="app-label">ScentGuard App</text>
+  <text x="490" y="730" class="cloud-text">Data Monitoring</text>
+  <text x="490" y="750" class="cloud-text">&amp; Control</text>
+
+  <!-- 7. Connections (Arrows) -->
+  <!-- Sensors to Microcontroller -->
+  <line x1="270" y1="110" x2="370" y2="110" class="arrow" />
+
+  <!-- Microcontroller to Cloud (Bi-directional) -->
+  <line x1="490" y1="170" x2="490" y2="240" class="arrow" />
+  <line x1="490" y1="240" x2="490" y2="180" class="arrow" />
+
+  <!-- Microcontroller to Relay -->
+  <path d="M 600 110 L 820 110 L 820 230" class="arrow" />
+
+  <!-- Relay to Outputs -->
+  <line x1="760" y1="360" x2="760" class="arrow" y2="430" />
+  <line x1="880" y1="360" x2="880" class="arrow" y2="430" />
+
+  <!-- Cloud to App (Bi-directional dashed/solid) -->
+  <line x1="490" y1="350" x2="490" y2="490" class="arrow" stroke-dasharray="4" />
+  <line x1="490" y1="490" x2="490" y2="360" class="arrow" />
+
+</svg>

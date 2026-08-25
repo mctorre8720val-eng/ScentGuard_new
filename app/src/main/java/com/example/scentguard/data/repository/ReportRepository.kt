@@ -1,32 +1,45 @@
 package com.example.scentguard.data.repository
 
 import com.example.scentguard.data.model.ReportSummary
-import kotlinx.coroutines.delay
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
-class ReportRepository {
-    suspend fun getDailyReport(): Result<ReportSummary> {
-        delay(700)
-        return Result.success(
-            ReportSummary(
-                avgGasLevel = "142 ppm",
-                totalFanRuntime = "45m",
-                airQualityScore = 92,
-                alertsCount = 2,
-                period = "Daily"
-            )
-        )
+class ReportRepository(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) {
+    suspend fun getDailyReport(restaurantId: String): Result<ReportSummary> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid ID"))
+        
+        return try {
+            val doc = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("summaries")
+                .document("daily")
+                .get()
+                .await()
+                
+            val summary = doc.toObject(ReportSummary::class.java) ?: ReportSummary()
+            Result.success(summary)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
-    suspend fun getWeeklyReport(): Result<ReportSummary> {
-        delay(700)
-        return Result.success(
-            ReportSummary(
-                avgGasLevel = "158 ppm",
-                totalFanRuntime = "5h 12m",
-                airQualityScore = 88,
-                alertsCount = 14,
-                period = "Weekly"
-            )
-        )
+    suspend fun getWeeklyReport(restaurantId: String): Result<ReportSummary> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid ID"))
+        
+        return try {
+            val doc = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("summaries")
+                .document("weekly")
+                .get()
+                .await()
+                
+            val summary = doc.toObject(ReportSummary::class.java) ?: ReportSummary()
+            Result.success(summary)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

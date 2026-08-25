@@ -2,27 +2,41 @@ package com.example.scentguard.data.repository
 
 import com.example.scentguard.data.model.ChartData
 import com.example.scentguard.data.model.ChartPoint
-import kotlinx.coroutines.delay
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
 
-class ChartRepository {
-    suspend fun getGasLevelHistory(): Result<ChartData> {
-        delay(500) // Simulation
-        val mockPoints = listOf(
-            ChartPoint(0f, 180f, "10am"),
-            ChartPoint(1f, 210f, "11am"),
-            ChartPoint(2f, 190f, "12pm"),
-            ChartPoint(3f, 250f, "1pm"),
-            ChartPoint(4f, 220f, "2pm"),
-            ChartPoint(5f, 185f, "3pm"),
-            ChartPoint(6f, 195f, "4pm")
-        )
-        return Result.success(
-            ChartData(
-                points = mockPoints,
-                minVal = 0f,
-                maxVal = 500f,
-                unit = "ppm"
+class ChartRepository(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) {
+    suspend fun getGasLevelHistory(restaurantId: String): Result<ChartData> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid ID"))
+        
+        return try {
+            val snapshot = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("sensor_history")
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .limit(24) // Last 24 records
+                .get()
+                .await()
+                
+            val points = snapshot.documents.mapIndexed { index, doc ->
+                val gas = doc.getDouble("gas")?.toFloat() ?: 0f
+                val label = doc.getString("timeLabel") ?: ""
+                ChartPoint(index.toFloat(), gas, label)
+            }
+            
+            Result.success(
+                ChartData(
+                    points = points,
+                    minVal = 0f,
+                    maxVal = 1000f,
+                    unit = "ppm"
+                )
             )
-        )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
