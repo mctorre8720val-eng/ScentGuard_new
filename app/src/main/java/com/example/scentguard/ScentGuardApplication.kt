@@ -8,6 +8,11 @@ import com.google.firebase.FirebaseApp
 
 class ScentGuardApplication : Application() {
     
+    companion object {
+        lateinit var instance: ScentGuardApplication
+            private set
+    }
+
     lateinit var preferencesManager: PreferencesManager
         private set
 
@@ -34,6 +39,7 @@ class ScentGuardApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         FirebaseApp.initializeApp(this)
         preferencesManager = PreferencesManager(this)
         sessionManager = SessionManager(preferencesManager)

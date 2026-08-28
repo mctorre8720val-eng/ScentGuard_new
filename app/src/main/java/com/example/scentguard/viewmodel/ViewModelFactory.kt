@@ -12,7 +12,7 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
         val app = application as ScentGuardApplication
         return when {
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
-                MainViewModel(app, app.authRepository, app.userRepository) as T
+                MainViewModel(app, app.authRepository, app.userRepository, app.historyRepository) as T
             }
             modelClass.isAssignableFrom(LoginViewModel::class.java) -> {
                 LoginViewModel(app.authRepository) as T

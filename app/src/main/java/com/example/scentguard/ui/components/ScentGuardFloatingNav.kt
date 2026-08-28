@@ -64,7 +64,7 @@ fun ScentGuardFloatingNav(
                     onNavigate = onNavigate
                 )
                 
-                if (user?.role == "Manager") {
+                if (user?.role?.uppercase() == "MANAGER") {
                     NavItem(
                         label = "History",
                         route = Screen.History.route,

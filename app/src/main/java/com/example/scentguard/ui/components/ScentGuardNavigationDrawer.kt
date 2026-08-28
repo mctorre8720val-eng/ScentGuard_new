@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.scentguard.R
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
@@ -81,17 +82,26 @@ fun ScentGuardNavigationDrawer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(52.dp),
                             color = MaterialTheme.colorScheme.primary,
                             shape = CircleShape
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = user?.fullName?.take(1)?.uppercase() ?: "G",
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                if (user?.profileImageUrl != null) {
+                                    AsyncImage(
+                                        model = user.profileImageUrl,
+                                        contentDescription = "Profile Picture",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Text(
+                                        text = user?.fullName?.take(1)?.uppercase() ?: "G",
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                         Spacer(Modifier.width(12.dp))
@@ -159,6 +169,13 @@ fun ScentGuardNavigationDrawer(
                     icon = Icons.Outlined.Person,
                     selected = currentRoute == Screen.Profile.route,
                     onClick = { onNavigate(Screen.Profile.route) }
+                )
+
+                DrawerItem(
+                    label = "Settings",
+                    icon = Icons.Outlined.Settings,
+                    selected = currentRoute == Screen.Settings.route,
+                    onClick = { onNavigate(Screen.Settings.route) }
                 )
                 
                 DrawerItem(

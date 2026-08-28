@@ -4,10 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.ScentGuardApplication
+import com.example.scentguard.data.model.HistoryItem
 import com.example.scentguard.data.model.Restaurant
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.data.model.UserSession
 import com.example.scentguard.data.repository.AuthRepository
+import com.example.scentguard.data.repository.HistoryRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
 import kotlinx.coroutines.Dispatchers
@@ -18,13 +20,17 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     application: Application,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val historyRepository: HistoryRepository
 ) : AndroidViewModel(application) {
 
     private val preferencesManager = (application as ScentGuardApplication).preferencesManager
 
     private val _userProfile = MutableStateFlow<Resource<UserProfile>>(Resource.Idle())
     val userProfile: StateFlow<Resource<UserProfile>> = _userProfile
+
+    private val _imageUploadState = MutableStateFlow<Resource<String>>(Resource.Idle())
+    val imageUploadState: StateFlow<Resource<String>> = _imageUploadState
 
     private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
     val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted
@@ -35,6 +41,12 @@ class MainViewModel(
     private val _liveRestaurantData = MutableStateFlow<Restaurant?>(null)
     val liveRestaurantData: StateFlow<Restaurant?> = _liveRestaurantData.asStateFlow()
 
+    private val _recentActivity = MutableStateFlow<List<HistoryItem>>(emptyList())
+    val recentActivity: StateFlow<List<HistoryItem>> = _recentActivity.asStateFlow()
+
+    private val _signalStatus = MutableStateFlow("Offline")
+    val signalStatus: StateFlow<String> = _signalStatus.asStateFlow()
+
     val userSession: StateFlow<UserSession?> = authRepository.userSession
 
     val currentUserEmail: String?
@@ -44,6 +56,7 @@ class MainViewModel(
         observeAuthState()
         loadLocalOnboardingStatus()
         observeLiveRestaurantData()
+        observeRecentActivity()
         
         // Attempt to restore session if firebase user exists but session is null
         if (authRepository.currentUser != null && authRepository.userSession.value == null) {
@@ -59,11 +72,44 @@ class MainViewModel(
                 if (session != null) {
                     userRepository.getRestaurantFlow(session.restaurantId).collect { restaurant ->
                         _liveRestaurantData.value = restaurant
+                        updateSignalStatus(restaurant)
                     }
                 } else {
                     _liveRestaurantData.value = null
+                    _signalStatus.value = "Offline"
                 }
             }
+        }
+    }
+
+    private fun observeRecentActivity() {
+        viewModelScope.launch {
+            userSession.collectLatest { session ->
+                if (session != null) {
+                    // Fetch real logs from HistoryRepository
+                    historyRepository.getHistory(session.restaurantId).onSuccess { list ->
+                        _recentActivity.value = list.take(3)
+                    }.onFailure {
+                        _recentActivity.value = emptyList()
+                    }
+                } else {
+                    _recentActivity.value = emptyList()
+                }
+            }
+        }
+    }
+
+    private fun updateSignalStatus(restaurant: Restaurant?) {
+        val lastSeen = restaurant?.lastSeen?.toDate()
+        if (lastSeen == null) {
+            _signalStatus.value = "Offline"
+            return
+        }
+        val diffMs = System.currentTimeMillis() - lastSeen.time
+        _signalStatus.value = when {
+            diffMs < 30000 -> "Active"      // < 30 seconds
+            diffMs < 120000 -> "Weak"       // 30s - 2m
+            else -> "Offline"               // > 2m
         }
     }
 
@@ -78,6 +124,20 @@ class MainViewModel(
         val uid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             userRepository.updateFcmToken(uid, token)
+        }
+    }
+
+    fun uploadProfileImage(uri: android.net.Uri) {
+        val uid = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _imageUploadState.value = Resource.Loading()
+            val result = userRepository.uploadProfileImage(uid, uri)
+            result.onSuccess {
+                _imageUploadState.value = Resource.Success(it)
+                fetchUserProfile() // Refresh UI
+            }.onFailure {
+                _imageUploadState.value = Resource.Error(it.message ?: "Upload failed")
+            }
         }
     }
 

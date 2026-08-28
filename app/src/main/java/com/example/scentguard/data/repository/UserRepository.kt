@@ -6,6 +6,7 @@ import com.example.scentguard.data.model.UserProfile
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,17 +17,39 @@ import java.util.concurrent.TimeUnit
 
 class UserRepository(
     private val authProvider: () -> FirebaseAuth = { FirebaseAuth.getInstance() },
-    private val firestoreProvider: () -> FirebaseFirestore = { FirebaseFirestore.getInstance() }
+    private val firestoreProvider: () -> FirebaseFirestore = { FirebaseFirestore.getInstance() },
+    private val storageProvider: () -> FirebaseStorage = { FirebaseStorage.getInstance() }
 ) {
     private val TAG = "UserRepository"
     private val TIMEOUT_MS = 7000L
 
     private val auth by lazy { try { authProvider() } catch (e: Exception) { null } }
     private val firestore by lazy { try { firestoreProvider() } catch (e: Exception) { null } }
+    private val storage by lazy { try { storageProvider() } catch (e: Exception) { null } }
 
     /**
-     * Provides a real-time stream of the restaurant data.
+     * Uploads a profile image to Firebase Storage and updates the user's profile URL.
      */
+    suspend fun uploadProfileImage(uid: String, imageUri: android.net.Uri): Result<String> {
+        return try {
+            val storageRef = storage?.reference ?: return Result.failure(Exception("Storage not initialized"))
+            val imageRef = storageRef.child("profile_images/$uid.jpg")
+            
+            // Upload
+            imageRef.putFile(imageUri).await()
+            
+            // Get URL
+            val downloadUrl = imageRef.downloadUrl.await().toString()
+            
+            // Update Firestore
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("users").document(uid).update("profileImageUrl", downloadUrl).await()
+            
+            Result.success(downloadUrl)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
     fun getRestaurantFlow(restaurantId: String): Flow<Restaurant?> = callbackFlow {
         val db = firestore ?: run {
             close()
@@ -59,6 +82,24 @@ class UserRepository(
         return try {
             val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
             db.collection("restaurants").document(restaurantId).update("fanMode", mode).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates the gas safety thresholds for a restaurant.
+     */
+    suspend fun updateThresholds(restaurantId: String, warn: Int, danger: Int): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("restaurants").document(restaurantId).update(
+                mapOf(
+                    "thresholdWarn" to warn,
+                    "thresholdDanger" to danger
+                )
+            ).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

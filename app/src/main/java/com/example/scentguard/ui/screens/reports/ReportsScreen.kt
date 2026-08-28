@@ -62,6 +62,7 @@ fun ReportsScreen(
 
     val reportState by viewModel.reportState.collectAsState()
     val chartState by viewModel.chartState.collectAsState()
+    val computedSummary by viewModel.computedSummary.collectAsState()
     val liveData by mainViewModel.liveRestaurantData.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     
@@ -180,7 +181,7 @@ fun ReportsScreen(
                                 ReportSkeleton()
                             }
                             is Resource.Success -> {
-                                ReportContent(state.data!!, chartState, liveData)
+                                ReportContent(computedSummary, chartState, liveData)
                             }
                             is Resource.Error -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -282,7 +283,19 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>, liveDa
             Box(modifier = Modifier.padding(24.dp)) {
                 when (chartState) {
                     is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().height(220.dp).shimmerEffect())
-                    is Resource.Success -> ScentGuardChart(chartState.data!!)
+                    is Resource.Success -> {
+                        if (chartState.data?.points?.isEmpty() == true) {
+                            Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.SsidChart, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                    Text("Insufficient data", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
+                                    Text("Ensure hardware is online", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+                                }
+                            }
+                        } else {
+                            ScentGuardChart(chartState.data!!)
+                        }
+                    }
                     is Resource.Error -> Text("Failed to load chart", color = MaterialTheme.colorScheme.error)
                     else -> {}
                 }
@@ -343,7 +356,11 @@ fun ScoreCard(score: Int) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Performance Index", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Text(
-                    text = if (score > 90) "Excellent" else "Stabilizing",
+                    text = when {
+                        score > 90 -> "Excellent"
+                        score > 70 -> "Good"
+                        else -> "Stabilizing"
+                    },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

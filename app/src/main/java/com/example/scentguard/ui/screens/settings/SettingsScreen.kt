@@ -28,6 +28,7 @@ import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +40,7 @@ fun SettingsScreen(
 ) {
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
+    val liveData by mainViewModel.liveRestaurantData.collectAsState()
     
     val themeMode by viewModel.themeMode.collectAsState()
     val gasAlerts by viewModel.gasAlertsEnabled.collectAsState()
@@ -152,6 +154,18 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.toggleFanAlerts(it) }
                         )
                     }
+
+                    // Move Hardware Configuration to be more prominent
+                    if (user != null) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        SectionTitle("Hardware Configuration")
+                        ThresholdConfigCard(
+                            restaurantId = user.restaurantId,
+                            isManager = user.role.uppercase() == "MANAGER",
+                            liveData = liveData,
+                            viewModel = viewModel
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(32.dp))
                     
@@ -192,6 +206,18 @@ fun SettingsScreen(
 }
 
 @Composable
+fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
 fun SectionTitle(title: String) {
     Text(
         text = title,
@@ -214,14 +240,111 @@ fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
-    ) {
-        Column(content = content)
+fun ThresholdConfigCard(
+    restaurantId: String,
+    isManager: Boolean,
+    liveData: com.example.scentguard.data.model.Restaurant?,
+    viewModel: SettingsViewModel
+) {
+    var warnVal by remember(liveData) { mutableStateOf((liveData?.thresholdWarn ?: 1000).toString()) }
+    var dangerVal by remember(liveData) { mutableStateOf((liveData?.thresholdDanger ?: 1500).toString()) }
+    
+    val updateState by viewModel.thresholdUpdateState.collectAsState()
+    
+    SettingsCard {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text("Gas Sensitivity (PPM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = warnVal,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) warnVal = it },
+                    label = { Text("WARN") },
+                    modifier = Modifier.weight(1f),
+                    enabled = isManager && updateState !is Resource.Loading,
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFFF9500),
+                        unfocusedBorderColor = Color(0xFFFF9500).copy(alpha = 0.2f)
+                    )
+                )
+                OutlinedTextField(
+                    value = dangerVal,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) dangerVal = it },
+                    label = { Text("DANGER") },
+                    modifier = Modifier.weight(1f),
+                    enabled = isManager && updateState !is Resource.Loading,
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFFF3B30),
+                        unfocusedBorderColor = Color(0xFFFF3B30).copy(alpha = 0.2f)
+                    )
+                )
+            }
+            
+            if (isManager) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                val isValid = (warnVal.toIntOrNull() ?: 0) < (dangerVal.toIntOrNull() ?: 0)
+                
+                Button(
+                    onClick = { 
+                        viewModel.updateThresholds(restaurantId, warnVal.toInt(), dangerVal.toInt()) 
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = isValid && updateState !is Resource.Loading,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    if (updateState is Resource.Loading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Apply Configuration", fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                if (!isValid) {
+                    Text(
+                        "Warning: WARN threshold must be less than DANGER.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                
+                if (updateState is Resource.Error) {
+                    Text(
+                        text = updateState.message ?: "Update failed",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                
+                if (updateState is Resource.Success) {
+                    LaunchedEffect(Unit) {
+                        delay(3000)
+                        viewModel.resetUpdateState()
+                    }
+                    Text(
+                        "Thresholds updated successfully!",
+                        color = Color(0xFF34C759),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            } else {
+                Text(
+                    "Note: Only Managers can modify these thresholds.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+        }
     }
 }
 

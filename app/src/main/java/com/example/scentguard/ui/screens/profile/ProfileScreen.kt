@@ -1,5 +1,8 @@
 package com.example.scentguard.ui.screens.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,10 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
@@ -41,8 +46,19 @@ fun ProfileScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
+    val uploadState by mainViewModel.imageUploadState.collectAsState()
+    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                mainViewModel.uploadProfileImage(uri)
+            }
+        }
+    )
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -98,7 +114,24 @@ fun ProfileScreen(
                 ) {
                     Spacer(modifier = Modifier.height(32.dp))
                     
-                    ProfileHeader(user)
+                    ProfileHeader(
+                        user = user,
+                        isUploading = uploadState is Resource.Loading,
+                        onEditImage = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
+                    
+                    if (uploadState is Resource.Error) {
+                        Text(
+                            text = uploadState.message ?: "Upload failed",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(48.dp))
                     
@@ -168,23 +201,62 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(user: UserProfile?) {
+fun ProfileHeader(
+    user: UserProfile?,
+    isUploading: Boolean,
+    onEditImage: () -> Unit
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
+        Box(
+            modifier = Modifier.size(140.dp),
+            contentAlignment = Alignment.BottomEnd
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = user?.fullName?.take(1)?.uppercase() ?: "G",
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (user?.profileImageUrl != null) {
+                        AsyncImage(
+                            model = user.profileImageUrl,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = user?.fullName?.take(1)?.uppercase() ?: "G",
+                            style = MaterialTheme.typography.displayLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    if (isUploading) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            SmallFloatingActionButton(
+                onClick = onEditImage,
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White,
+                modifier = Modifier.padding(4.dp)
+            ) {
+                Icon(Icons.Outlined.CameraAlt, contentDescription = "Change Picture", modifier = Modifier.size(16.dp))
             }
         }
         

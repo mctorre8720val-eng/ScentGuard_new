@@ -77,15 +77,24 @@ class ScentGuardWatcherService : Service() {
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    val airStatus = snapshot.getString("airStatus") ?: "SAFE"
                     val fanStatus = snapshot.getString("fanStatus") ?: "OFF"
                     val fanMode = snapshot.getString("fanMode") ?: "AUTO"
                     val gasPpm = snapshot.getLong("currentGasPpm") ?: 0
                     val lastSeen = snapshot.getTimestamp("lastSeen")
                     
-                    // 1. Air Status Transitions
-                    if (lastKnownAirStatus != null && lastKnownAirStatus != airStatus) {
-                        handleAirStatusTransition(restaurantId, lastKnownAirStatus!!, airStatus, gasPpm.toInt(), lastSeen)
+                    // Dynamic thresholds from Firestore (default to 1000/1500)
+                    val tWarn = snapshot.getLong("thresholdWarn")?.toInt() ?: 1000
+                    val tDanger = snapshot.getLong("thresholdDanger")?.toInt() ?: 1500
+                    
+                    // 1. Air Status Transitions (Use local gas reading if status field is delayed)
+                    val currentAirStatus = when {
+                        gasPpm >= tDanger -> "DANGER"
+                        gasPpm >= tWarn -> "WARN"
+                        else -> "SAFE"
+                    }
+                    
+                    if (lastKnownAirStatus != null && lastKnownAirStatus != currentAirStatus) {
+                        handleAirStatusTransition(restaurantId, lastKnownAirStatus!!, currentAirStatus, gasPpm.toInt(), lastSeen)
                     }
                     
                     // 2. Fan Status Transitions
@@ -93,7 +102,7 @@ class ScentGuardWatcherService : Service() {
                         handleFanStatusTransition(restaurantId, fanStatus, fanMode, gasPpm.toInt(), lastSeen)
                     }
                     
-                    lastKnownAirStatus = airStatus
+                    lastKnownAirStatus = currentAirStatus
                     lastKnownFanStatus = fanStatus
                 }
             }

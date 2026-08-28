@@ -17,10 +17,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFanControl
@@ -42,6 +44,8 @@ fun DashboardScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     val liveData by mainViewModel.liveRestaurantData.collectAsState()
+    val recentActivity by mainViewModel.recentActivity.collectAsState()
+    val signalStatus by mainViewModel.signalStatus.collectAsState()
     
     // Heartbeat logic: Consider "Online" if lastSeen is within 2 minutes
     var isOnline by remember { mutableStateOf(false) }
@@ -134,7 +138,11 @@ fun DashboardScreen(
                                     )
                                 }
                                 Box(modifier = Modifier.weight(0.8f)) {
-                                    StatisticsSection(isOnline = isOnline, fanStatus = liveData?.fanStatus ?: "OFF")
+                                    StatisticsSection(
+                                        isOnline = isOnline, 
+                                        fanStatus = liveData?.fanStatus ?: "OFF",
+                                        signalStatus = signalStatus
+                                    )
                                 }
                             }
                         }
@@ -147,7 +155,11 @@ fun DashboardScreen(
                             )
                         }
                         item {
-                            StatisticsSection(isOnline = isOnline, fanStatus = liveData?.fanStatus ?: "OFF")
+                            StatisticsSection(
+                                isOnline = isOnline, 
+                                fanStatus = liveData?.fanStatus ?: "OFF",
+                                signalStatus = signalStatus
+                            )
                         }
                     }
                     
@@ -176,7 +188,10 @@ fun DashboardScreen(
                     }
                     
                     item {
-                        RecentActivitySection()
+                        RecentActivitySection(
+                            items = recentActivity,
+                            onShowAll = { navController.navigate(Screen.History.route) }
+                        )
                     }
                     
                     item {
@@ -210,41 +225,72 @@ fun DashboardHeader(user: UserProfile?) {
         }
     }
 
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(
-            text = "$greeting,",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = user?.fullName ?: "Guest User",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-1).sp
-        )
-        
-        Row(
-            modifier = Modifier.padding(top = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                shape = CircleShape
-            ) {
-                Text(
-                    text = user?.role ?: "Staff",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = user?.restaurantName ?: "ScentGuard Station",
-                style = MaterialTheme.typography.titleMedium,
+                text = "$greeting,",
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                text = user?.fullName ?: "Guest User",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-1).sp
+            )
+            
+            Row(
+                modifier = Modifier.padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = user?.role ?: "Staff",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = user?.restaurantName ?: "ScentGuard Station",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (user?.profileImageUrl != null) {
+                    AsyncImage(
+                        model = user.profileImageUrl,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = user?.fullName?.take(1)?.uppercase() ?: "G",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
@@ -464,7 +510,7 @@ fun MetricCard(
 }
 
 @Composable
-fun StatisticsSection(isOnline: Boolean, fanStatus: String) {
+fun StatisticsSection(isOnline: Boolean, fanStatus: String, signalStatus: String) {
     Column {
         Text(
             "System performance",
@@ -480,11 +526,21 @@ fun StatisticsSection(isOnline: Boolean, fanStatus: String) {
                 Modifier.fillMaxWidth(),
                 statusColor = if (fanStatus.uppercase() == "ON") Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            MiniStatCard("Uptime", if (isOnline) "99%" else "0%", Icons.Outlined.Timer, Modifier.fillMaxWidth())
             MiniStatCard(
-                "Status", 
-                if (isOnline) "Online" else "Offline", 
-                Icons.Outlined.Sensors, 
+                label = "Signal Status", 
+                value = signalStatus, 
+                icon = Icons.Outlined.Sensors, 
+                Modifier.fillMaxWidth(),
+                statusColor = when(signalStatus) {
+                    "Active" -> Color(0xFF34C759)
+                    "Weak" -> Color(0xFFFF9500)
+                    else -> MaterialTheme.colorScheme.error
+                }
+            )
+            MiniStatCard(
+                "Health", 
+                if (isOnline) "Normal" else "Offline", 
+                Icons.Outlined.Analytics, 
                 Modifier.fillMaxWidth(),
                 statusColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
             )
@@ -522,7 +578,10 @@ fun MiniStatCard(
 }
 
 @Composable
-fun RecentActivitySection() {
+fun RecentActivitySection(
+    items: List<com.example.scentguard.data.model.HistoryItem>,
+    onShowAll: () -> Unit
+) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -534,7 +593,7 @@ fun RecentActivitySection() {
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            TextButton(onClick = { /* View All */ }) {
+            TextButton(onClick = onShowAll) {
                 Text("Show all", fontWeight = FontWeight.Bold)
             }
         }
@@ -546,9 +605,25 @@ fun RecentActivitySection() {
             border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                ActivityItem("Fan Activated", "Auto safety trigger", "10:30 AM", Icons.Outlined.AutoMode)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
-                ActivityItem("Air Quality Good", "Levels stabilized", "10:45 AM", Icons.Outlined.CheckCircleOutline)
+                if (items.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("No recent activity", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                    }
+                } else {
+                    items.forEachIndexed { index, item ->
+                        val icon = when (item.eventType) {
+                            "FAN_ON" -> Icons.Outlined.AutoMode
+                            "FAN_OFF" -> Icons.Outlined.Air
+                            "AIR_DANGER" -> Icons.Outlined.WarningAmber
+                            else -> Icons.Outlined.CheckCircleOutline
+                        }
+                        val time = java.text.SimpleDateFormat("hh:mm a", Locale.getDefault()).format(item.timestamp.toDate())
+                        ActivityItem(item.title, item.description, time, icon)
+                        if (index < items.size - 1) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                        }
+                    }
+                }
             }
         }
     }
