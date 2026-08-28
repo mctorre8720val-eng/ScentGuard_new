@@ -26,4 +26,24 @@ class HistoryRepository(
             Result.failure(e)
         }
     }
+
+    /**
+     * Adds a deterministic log entry to the restaurant's history.
+     * Uses set() with a predefined ID to support multi-device deduplication.
+     */
+    suspend fun addLogEntry(restaurantId: String, log: HistoryItem): Result<Unit> {
+        if (restaurantId.isBlank() || log.id.isBlank()) return Result.failure(Exception("Invalid data"))
+        
+        return try {
+            firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("logs")
+                .document(log.id)
+                .set(log)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

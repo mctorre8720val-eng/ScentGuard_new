@@ -1,71 +1,46 @@
-# Implementation Plan - Phase 5A: FCM Infrastructure & Danger Alerts
+# Implementation Plan - Phase 5C: Hardware-Led Analytics Pipeline
 
-This phase establishes the backbone for proactive safety alerts. It ensures that critical "DANGER" events from the hardware trigger reliable push notifications to all restaurant members (Manager and Staff), regardless of app state.
+This plan establishes the automated data sampling pipeline where the ESP32 hardware populates the `sensor_history` collection, allowing the Android app to display historical air quality trends.
 
-## 1. Android Infrastructure
-**Goal:** Prepare the app to receive and display high-priority notifications.
+## 1. Hardware Strategy (ESP32)
+The ESP32 will act as the autonomous data logger, ensuring a consistent history even without user app activity.
 
-### Dependency Update
-#### [MODIFY] [libs.versions.toml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/gradle/libs.versions.toml)
-- Add `firebase-messaging` to the libraries section.
+### **Sampling Logic**
+- **Interval:** 15 minutes (`900,000 ms`).
+- **Deduplication:** Use deterministic document IDs based on 15-minute time slots (e.g., `snap_20260828_1645`).
+- **Data Payload:**
+    - `currentGasPpm` (Int)
+    - `airStatus` (String)
+    - `fanStatus` (String)
+    - `fanMode` (String)
+    - `timestamp` (Firestore Server Timestamp)
 
-#### [MODIFY] [build.gradle.kts](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/build.gradle.kts)
-- Add `implementation(libs.firebase.messaging)` to the dependencies block.
+## 2. Android Refinement
+Update the app to consume the real hardware-generated history.
 
-### Messaging Service
-#### [NEW] [ScentGuardMessagingService.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardMessagingService.kt)
-- **`onNewToken`**: Trigger `UserRepository.updateFcmToken()` to store the unique device identifier in Firestore.
-- **`onMessageReceived`**:
-    - Handle high-priority data payloads.
-    - Build and show a system notification using the "Alerts" channel.
-    - Configure for "Heads-up" display, loud sound, and distinct vibration pattern.
+#### [MODIFY] [ChartRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/ChartRepository.kt)
+- Change field mapping from `gas` to `currentGasPpm`.
+- Convert the Firestore `timestamp` field into a human-readable "HH:mm" string for the chart X-axis labels.
+- Ensure the query sorts by `timestamp` in ascending order to draw the trend line correctly.
 
-### Permission & Channel Setup
-#### [MODIFY] [MainActivity.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/MainActivity.kt)
-- **Channel Creation**: Create a `NotificationChannel` with `IMPORTANCE_HIGH`.
-- **Permission Request**: Implement a one-time request for `Manifest.permission.POST_NOTIFICATIONS` on Android 13+.
-
-#### [MODIFY] [AndroidManifest.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/AndroidManifest.xml)
-- Declare `POST_NOTIFICATIONS` permission.
-- Register `ScentGuardMessagingService` with the `com.google.firebase.MESSAGING_EVENT` intent filter.
-
----
-
-## 2. Server-Side Alert Logic
-**Goal:** Reliable, app-independent triggering of notifications.
-
-### Cloud Function Strategy
-#### [NEW] `index.js` (FCM Trigger Logic)
-- **Trigger**: `onDocumentUpdated` on `restaurants/{restaurantId}`.
-- **Logic**:
-    1. Check if `before.airStatus != "DANGER"` and `after.airStatus == "DANGER"`.
-    2. If true, query the `users` collection where `restaurantId == updatedRestaurantId`.
-    3. Retrieve all `fcmToken` values for matching users.
-    4. Construct a multicast FCM message with:
-        - Title: `ScentGuard Alert`
-        - Body: `Dangerous gas level detected. Gas reading: {currentGasPpm}. Check the garbage storage room immediately.`
-    5. Dispatch the message and handle token cleanup (remove expired tokens).
-
----
-
-## 3. Data Integration
-#### [MODIFY] [UserRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/UserRepository.kt)
-- Add `updateFcmToken(uid: String, token: String)` function.
+## 3. Constraints & Safety
+- **Free Tier:** No Cloud Functions or Blaze plan required.
+- **Non-Blocking:** Uses `millis()` timers to ensure fan control and telemetry remain responsive (5s polling).
+- **Isolation:** Strictly follows the `restaurants/{restaurantId}` sub-collection structure.
 
 ---
 
 ## Verification Plan
 
-### Technical Checks
-1. **Compilation**: Ensure the app builds without errors after adding Messaging libraries.
-2. **Permission Flow**: Verify the Android 13+ notification prompt appears correctly.
-3. **Token Registration**: Verify a token appears in the `users/{uid}/fcmToken` field in Firestore after login.
+### 1. ESP32 Verification
+- Monitor Serial Monitor for "History Snapshot: Success".
+- Verify the new document appears in `restaurants/{id}/sensor_history` via Firebase Console.
 
-### Functional Checks
-4. **Foreground/Background**: Send a test message via Firebase Console and verify it appears while the app is in all states (Open, Background, Killed).
-5. **Logic Isolation**:
-    - Manually change `airStatus` from `SAFE` to `DANGER` in Firestore.
-    - Verify ONE notification is sent.
-    - Update `currentGasPpm` while status remains `DANGER`.
-    - Verify NO duplicate notification is sent.
-6. **Restaurant Targeting**: Verify only users associated with the specific `restaurantId` receive the alert.
+### 2. Android App Verification
+- Open the **Analytics** screen.
+- Verify the chart draws points using real `currentGasPpm` values.
+- Verify X-axis labels show correct times (e.g., 14:15, 14:30).
+
+### 3. Stability Check
+- Verify **Phase 5A** notifications still trigger on DANGER.
+- Verify **Phase 5B** manual logs still appear on fan toggle.

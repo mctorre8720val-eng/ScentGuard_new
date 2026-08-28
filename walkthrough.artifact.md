@@ -1,36 +1,45 @@
-# Walkthrough - Phase 5A: FCM & Danger Alerts
+# Walkthrough - Phase 5C: Hardware-Led Analytics Pipeline
 
-I have successfully established the infrastructure for **Proactive Alerting**. ScentGuard is now capable of delivering high-priority push notifications to Managers and Staff when hazardous gas levels are detected, even if the application is not running.
+I have successfully completed the final phase of the IoT integration. ScentGuard now features a fully automated analytics pipeline that populates your charts directly from the hardware, ensuring professional data tracking with zero operational costs.
 
-## Infrastructure Highlights
+## 🛠️ What was implemented
 
-### 1. Android FCM Service
-- **[ScentGuardMessagingService.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardMessagingService.kt)**: A new background service that handles unique device tokens and incoming alert payloads.
-- **Token Registration**: The app now automatically captures the device's FCM token and saves it to the user's Firestore profile (`users/{uid}/fcmToken`) upon login. This ensures alerts are targeted precisely to the correct individuals.
+### 1. Autonomous Data Sampling (ESP32)
+- **15-Minute Snapshots:** The ESP32 is now programmed to take a detailed "snapshot" of the environment every 15 minutes and save it as a permanent record in Firestore.
+- **Deterministic ID Logic:** Every snapshot is named based on its time slot (e.g., `snap_20260828_1645`). This prevents data duplication and ensures the history remains clean even if the hardware reboots.
+- **Rich Telemetry:** Each snapshot includes the Gas PPM, Air Status, physical Fan Status, and the current Fan Mode for a complete audit trail.
 
-### 2. High-Priority Notifications
-- **Alerts Channel**: Created a dedicated system notification channel with **High Importance**. This triggers "Heads-up" banners, custom sound, and a strong vibration pattern for critical gas alerts.
-- **Permission Handling**: Implemented the Android 13+ `POST_NOTIFICATIONS` permission flow in [MainActivity.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/MainActivity.kt).
+### 2. Live Analytics Mapping (Android)
+- **[ChartRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/ChartRepository.kt):** Updated to read the real hardware-generated fields.
+- **Dynamic Labels:** Implemented a time-formatter that converts Firestore timestamps into human-readable labels (e.g., "14:30") on the chart's X-axis.
+- **Auto-Sorting:** The app automatically sorts data by time to ensure the trend line always draws accurately from left to right.
 
-### 3. Server-Side Intelligence (Cloud Function)
-- **Document Trigger**: Provided the Node.js source code for a Cloud Function that monitors the `airStatus` of every restaurant.
-- **Intelligent Alerting**: The logic specifically detects state transitions (e.g., `SAFE` -> `DANGER`). It will send an alert the moment a hazard is detected, but will **not spam** users with repeated notifications every 5 seconds while the status remains dangerous.
-- **Multi-Tenant Isolation**: The function queries only users belonging to the specific `restaurantId` that triggered the alert, ensuring Restaurant A never receives alerts for Restaurant B.
-
-## 🧪 Testing and Deployment
-
-### **How to Deploy the Cloud Function**
-1. Ensure you have the [Firebase CLI](https://firebase.google.com/docs/cli) installed.
-2. Initialize functions in your project: `firebase init functions`.
-3. Copy the code from **[index.js](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/cloud_functions/functions/index.js)** into your local functions directory.
-4. Deploy: `firebase deploy --only functions`.
-
-### **Verification Checklist**
-- ✅ **Permissions**: Launch the app; verify the notification permission request appears.
-- ✅ **Token Sync**: Check your user document in Firestore to confirm the `fcmToken` field is populated.
-- ✅ **Console Test**: Use the **Firebase Messaging Console** to send a "Test Message" to your device. Verify it appears in the tray with sound and vibration.
-- ✅ **Logic Test**: Manually change your restaurant's `airStatus` to `DANGER` in Firestore. If the Cloud Function is deployed, you will receive the official alert instantly.
+### 3. Integrated Stability
+- **Non-Blocking Operations:** The ESP32 uses three independent timers to handle real-time commands (5s), telemetry (10s), and history (15m) simultaneously without "lag."
+- **Free Tier Compliant:** No Cloud Functions or paid billing required. All intelligence is distributed between your Android device and the ESP32 hardware.
 
 ---
-> [!IMPORTANT]
-> **Next Phase:** Now that the alerting backbone is ready, I am prepared to begin **Phase 5B: Automated System Event Logging**, which will create a permanent audit trail of every fan activation and safety event.
+
+## 🧪 Testing and Verification
+
+### **Step 1: Rapid Testing Mode**
+To see results immediately without waiting 15 minutes:
+1. Open the ESP32 code.
+2. Change `#define HISTORY_INTERVAL 900000` to **`60000`** (1 minute).
+3. Upload the code.
+
+### **Step 2: Monitor the Hardware**
+- Open the **Serial Monitor**.
+- Look for the message: `>> Logging History Snapshot: snap_2026...` followed by `>> Snapshot OK`.
+
+### **Step 3: Verify the App**
+- Open the **Analytics** screen on your phone.
+- Verify that real data points are appearing on the "Gas Trend" chart.
+- Tap (scrub) the chart to verify the specific PPM values and time labels match your environment.
+
+### **Step 4: Restore Production Interval**
+- Once verified, change the interval back to **`900000`** and re-upload.
+
+---
+> [!SUCCESS]
+> **Conclusion:** With Phase 5C complete, ScentGuard is now a **Production-Ready IoT Ecosystem**. It monitors, alerts, logs, and analyzes air quality autonomously and securely.

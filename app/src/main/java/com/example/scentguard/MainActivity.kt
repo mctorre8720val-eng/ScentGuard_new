@@ -1,6 +1,7 @@
 package com.example.scentguard
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.scentguard.navigation.SetupNavGraph
+import com.example.scentguard.service.ScentGuardWatcherService
 import com.example.scentguard.ui.theme.ScentGuardTheme
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
@@ -67,6 +69,27 @@ class MainActivity : ComponentActivity() {
                                     mainViewModel.updateFcmToken(token)
                                 }
                             }
+                        }
+                    }
+
+                    // Manage Background Watcher Service
+                    val session by mainViewModel.userSession.collectAsState()
+                    LaunchedEffect(session) {
+                        if (session != null) {
+                            val intent = Intent(this@MainActivity, ScentGuardWatcherService::class.java).apply {
+                                action = ScentGuardWatcherService.ACTION_START
+                                putExtra(ScentGuardWatcherService.EXTRA_RESTAURANT_ID, session?.restaurantId)
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(intent)
+                            } else {
+                                startService(intent)
+                            }
+                        } else {
+                            val intent = Intent(this@MainActivity, ScentGuardWatcherService::class.java).apply {
+                                action = ScentGuardWatcherService.ACTION_STOP
+                            }
+                            stopService(intent)
                         }
                     }
 

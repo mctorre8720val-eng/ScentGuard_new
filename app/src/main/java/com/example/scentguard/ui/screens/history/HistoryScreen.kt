@@ -44,7 +44,7 @@ fun HistoryScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    if (user != null && user.role != "Manager") {
+    if (user != null && user.role.uppercase() != "MANAGER") {
         LaunchedEffect(Unit) {
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Dashboard.route) { inclusive = true }
