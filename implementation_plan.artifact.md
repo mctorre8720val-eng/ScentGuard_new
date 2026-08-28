@@ -1,28 +1,71 @@
-# Implementation Plan - Add Google Icon to Login Button
+# Implementation Plan - Phase 5A: FCM Infrastructure & Danger Alerts
 
-This plan details the addition of the official Google "G" icon to the existing Google Sign-In button on the Login screen, ensuring a professional and branded appearance without altering any underlying logic.
+This phase establishes the backbone for proactive safety alerts. It ensures that critical "DANGER" events from the hardware trigger reliable push notifications to all restaurant members (Manager and Staff), regardless of app state.
 
-## User Review Required
+## 1. Android Infrastructure
+**Goal:** Prepare the app to receive and display high-priority notifications.
 
-> [!NOTE]
-> I am adding a new vector resource `ic_google_logo.xml` and updating the `GoogleButton` component to display it. No functional changes will be made to the authentication flow.
+### Dependency Update
+#### [MODIFY] [libs.versions.toml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/gradle/libs.versions.toml)
+- Add `firebase-messaging` to the libraries section.
 
-## Proposed Changes
+#### [MODIFY] [build.gradle.kts](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/build.gradle.kts)
+- Add `implementation(libs.firebase.messaging)` to the dependencies block.
 
-### 1. Resources
-#### [NEW] [ic_google_logo.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/res/drawable/ic_google_logo.xml)
-- Add a new vector drawable containing the official Google "G" logo with its four brand colors (Red, Yellow, Green, Blue).
+### Messaging Service
+#### [NEW] [ScentGuardMessagingService.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardMessagingService.kt)
+- **`onNewToken`**: Trigger `UserRepository.updateFcmToken()` to store the unique device identifier in Firestore.
+- **`onMessageReceived`**:
+    - Handle high-priority data payloads.
+    - Build and show a system notification using the "Alerts" channel.
+    - Configure for "Heads-up" display, loud sound, and distinct vibration pattern.
 
-### 2. UI Components
-#### [MODIFY] [GoogleButton.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/components/GoogleButton.kt)
-- Update the button content to include an `Image` composable before the "Sign in with Google" text.
-- Use `Row` for proper horizontal alignment and spacing (12dp) between the icon and the label.
+### Permission & Channel Setup
+#### [MODIFY] [MainActivity.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/MainActivity.kt)
+- **Channel Creation**: Create a `NotificationChannel` with `IMPORTANCE_HIGH`.
+- **Permission Request**: Implement a one-time request for `Manifest.permission.POST_NOTIFICATIONS` on Android 13+.
+
+#### [MODIFY] [AndroidManifest.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/AndroidManifest.xml)
+- Declare `POST_NOTIFICATIONS` permission.
+- Register `ScentGuardMessagingService` with the `com.google.firebase.MESSAGING_EVENT` intent filter.
+
+---
+
+## 2. Server-Side Alert Logic
+**Goal:** Reliable, app-independent triggering of notifications.
+
+### Cloud Function Strategy
+#### [NEW] `index.js` (FCM Trigger Logic)
+- **Trigger**: `onDocumentUpdated` on `restaurants/{restaurantId}`.
+- **Logic**:
+    1. Check if `before.airStatus != "DANGER"` and `after.airStatus == "DANGER"`.
+    2. If true, query the `users` collection where `restaurantId == updatedRestaurantId`.
+    3. Retrieve all `fcmToken` values for matching users.
+    4. Construct a multicast FCM message with:
+        - Title: `ScentGuard Alert`
+        - Body: `Dangerous gas level detected. Gas reading: {currentGasPpm}. Check the garbage storage room immediately.`
+    5. Dispatch the message and handle token cleanup (remove expired tokens).
+
+---
+
+## 3. Data Integration
+#### [MODIFY] [UserRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/UserRepository.kt)
+- Add `updateFcmToken(uid: String, token: String)` function.
 
 ---
 
 ## Verification Plan
 
-### Manual Verification
-- **Visual Check:** Open the Login screen and verify that the "Sign in with Google" button now displays the multi-colored Google "G" icon.
-- **Loading State:** Ensure the icon is replaced by the `CircularProgressIndicator` when the button is in its loading state.
-- **Functionality:** Click the button to confirm it still triggers the Google account picker as expected.
+### Technical Checks
+1. **Compilation**: Ensure the app builds without errors after adding Messaging libraries.
+2. **Permission Flow**: Verify the Android 13+ notification prompt appears correctly.
+3. **Token Registration**: Verify a token appears in the `users/{uid}/fcmToken` field in Firestore after login.
+
+### Functional Checks
+4. **Foreground/Background**: Send a test message via Firebase Console and verify it appears while the app is in all states (Open, Background, Killed).
+5. **Logic Isolation**:
+    - Manually change `airStatus` from `SAFE` to `DANGER` in Firestore.
+    - Verify ONE notification is sent.
+    - Update `currentGasPpm` while status remains `DANGER`.
+    - Verify NO duplicate notification is sent.
+6. **Restaurant Targeting**: Verify only users associated with the specific `restaurantId` receive the alert.

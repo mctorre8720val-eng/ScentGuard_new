@@ -129,11 +129,12 @@ fun DashboardScreen(
                                 Box(modifier = Modifier.weight(1.2f)) {
                                     AirQualityHero(
                                         gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
+                                        airStatus = liveData?.airStatus ?: "SAFE",
                                         onViewAnalytics = { navController.navigate(Screen.Reports.route) }
                                     )
                                 }
                                 Box(modifier = Modifier.weight(0.8f)) {
-                                    StatisticsSection(isOnline = isOnline)
+                                    StatisticsSection(isOnline = isOnline, fanStatus = liveData?.fanStatus ?: "OFF")
                                 }
                             }
                         }
@@ -141,11 +142,12 @@ fun DashboardScreen(
                         item {
                             AirQualityHero(
                                 gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
+                                airStatus = liveData?.airStatus ?: "SAFE",
                                 onViewAnalytics = { navController.navigate(Screen.Reports.route) }
                             )
                         }
                         item {
-                            StatisticsSection(isOnline = isOnline)
+                            StatisticsSection(isOnline = isOnline, fanStatus = liveData?.fanStatus ?: "OFF")
                         }
                     }
                     
@@ -250,6 +252,7 @@ fun DashboardHeader(user: UserProfile?) {
 @Composable
 fun AirQualityHero(
     gasLevel: Int,
+    airStatus: String,
     onViewAnalytics: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "aura")
@@ -272,21 +275,17 @@ fun AirQualityHero(
         label = "alpha"
     )
 
-    val status = remember(gasLevel) {
-        when {
-            gasLevel == 0 -> "Standby"
-            gasLevel < 200 -> "Good"
-            gasLevel < 400 -> "Moderate"
-            else -> "Poor"
-        }
+    val statusText = remember(gasLevel, airStatus) {
+        if (gasLevel == 0) "Standby" else airStatus.uppercase()
     }
 
-    val statusColor = remember(gasLevel) {
-        when {
-            gasLevel == 0 -> Color.Gray
-            gasLevel < 200 -> Color(0xFF34C759)
-            gasLevel < 400 -> Color(0xFFFF9500)
-            else -> Color(0xFFFF3B30)
+    val statusColor = remember(airStatus, gasLevel) {
+        if (gasLevel == 0) return@remember Color.Gray
+        when (airStatus.uppercase()) {
+            "SAFE" -> Color(0xFF34C759)
+            "WARN" -> Color(0xFFFF9500)
+            "DANGER" -> Color(0xFFFF3B30)
+            else -> Color(0xFF34C759)
         }
     }
 
@@ -330,7 +329,7 @@ fun AirQualityHero(
                 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = status,
+                        text = statusText,
                         style = MaterialTheme.typography.displayLarge,
                         fontWeight = FontWeight.Bold,
                         color = statusColor
@@ -351,14 +350,14 @@ fun AirQualityHero(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    if (gasLevel == 0) Icons.Outlined.PowerSettingsNew else if (gasLevel < 400) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                    if (gasLevel == 0) Icons.Outlined.PowerSettingsNew else if (airStatus.uppercase() != "DANGER") Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
                     null, 
                     tint = statusColor, 
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (gasLevel == 0) "Awaiting sensor data..." else if (gasLevel < 400) "Optimized ventilation" else "Ventilation recommended",
+                    text = if (gasLevel == 0) "Awaiting sensor data..." else if (airStatus.uppercase() != "DANGER") "Optimized ventilation" else "Ventilation recommended",
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -399,11 +398,11 @@ fun MetricsGrid(
             if (isWideScreen) {
                 MetricCard(
                     label = "System Status",
-                    value = if (!isOnline) "OFFLINE" else if (gasLevel < 400) "OK" else "HIGH",
+                    value = if (!isOnline) "OFFLINE" else "OK",
                     unit = "",
                     icon = Icons.Outlined.Sensors,
                     modifier = Modifier.weight(1f),
-                    valueColor = if (!isOnline) MaterialTheme.colorScheme.error else if (gasLevel < 400) Color(0xFF34C759) else Color(0xFFFF3B30)
+                    valueColor = if (!isOnline) MaterialTheme.colorScheme.error else Color(0xFF34C759)
                 )
             }
         }
@@ -465,7 +464,7 @@ fun MetricCard(
 }
 
 @Composable
-fun StatisticsSection(isOnline: Boolean) {
+fun StatisticsSection(isOnline: Boolean, fanStatus: String) {
     Column {
         Text(
             "System performance",
@@ -474,7 +473,13 @@ fun StatisticsSection(isOnline: Boolean) {
             modifier = Modifier.padding(vertical = 12.dp)
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MiniStatCard("Alerts Today", "2", Icons.Outlined.WarningAmber, Modifier.fillMaxWidth())
+            MiniStatCard(
+                label = "Fan Status", 
+                value = fanStatus.uppercase(), 
+                icon = Icons.Outlined.Air, 
+                Modifier.fillMaxWidth(),
+                statusColor = if (fanStatus.uppercase() == "ON") Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
             MiniStatCard("Uptime", if (isOnline) "99%" else "0%", Icons.Outlined.Timer, Modifier.fillMaxWidth())
             MiniStatCard(
                 "Status", 

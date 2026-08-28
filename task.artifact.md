@@ -1,10 +1,15 @@
-# Task: Add Google Icon to Login Button
+# Task: Phase 5A - FCM Infrastructure & Danger Alerts
 
-- `[x]` **Phase 1: Resource Creation**
-    - `[x]` Create `ic_google_logo.xml` with official brand colors
-- `[x]` **Phase 2: UI Component Update**
-    - `[x]` Update `GoogleButton.kt` to display the icon
-    - `[x]` Verify spacing and alignment (8pt grid compliant)
-- `[x]` **Phase 3: Final Polish**
-    - `[x]` Verify loading state behavior
-    - `[x]` Confirm no impact on existing auth logic
+- `[x]` **Phase 5A: FCM Infrastructure + DANGER Alert**
+    - `[x]` Add `firebase-messaging` to `libs.versions.toml` and `app/build.gradle.kts`
+    - `[x]` Declare `POST_NOTIFICATIONS` and register service in `AndroidManifest.xml`
+    - `[x]` Implement `ScentGuardMessagingService.kt`
+    - `[x]` Add `updateFcmToken` logic to `UserRepository.kt`
+    - `[x]` Implement notification channel and permission request in `MainActivity.kt`
+    - `[x]` Provide Cloud Function source code for deployment
+- `[/]` **Phase 5B: Automated System Event Logging**
+    - `[ ]` Implement state transition tracking in `MainViewModel.kt`
+    - `[ ]` Add `addLogEntry` to `HistoryRepository.kt`
+- `[ ]` **Phase 5C: Analytics/Sensor History Pipeline**
+    - `[ ]` Implement sampling logic for `sensor_history`
+    - `[ ]` Verify charts display the new historical data

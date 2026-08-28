@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "75241057260",
+    "firebase_url": "https://scentguard-4thyear-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "scentguard-4thyear",
     "storage_bucket": "scentguard-4thyear.firebasestorage.app"
   },
@@ -13,6 +14,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "75241057260-h1e2bl903f3g0amt47oljp6fkc48h7g7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.scentguard",
+            "certificate_hash": "4d070c01e1e94735a17f32229fe23d02295a68f5"
+          }
+        },
         {
           "client_id": "75241057260-05s50pjcl5a7sambng2qa999femjcr2i.apps.googleusercontent.com",
           "client_type": 3

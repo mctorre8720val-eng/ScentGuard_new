@@ -314,6 +314,24 @@ class UserRepository(
         }
     }
 
+    /**
+     * Updates the FCM token for a user.
+     */
+    suspend fun updateFcmToken(uid: String, token: String): Result<Unit> {
+        Log.d(TAG, "Updating FCM token for UID: $uid")
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            withTimeout(TIMEOUT_MS) {
+                db.collection("users").document(uid).update("fcmToken", token).await()
+            }
+            Log.d(TAG, "FCM token updated successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update FCM token", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun getUserProfile(): Result<UserProfile?> {
         val uid = auth?.currentUser?.uid
         Log.d(TAG, "Fetching user profile for UID: $uid")

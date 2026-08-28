@@ -9,6 +9,8 @@ data class Restaurant(
     val inviteCode: String = "",
     val inviteCodeExpiresAt: Timestamp? = null,
     val currentGasPpm: Int = 0,
+    val airStatus: String = "SAFE", // "SAFE", "WARN", "DANGER"
+    val fanStatus: String = "OFF", // "ON", "OFF"
     val temperature: Float = 0f,
     val humidity: Float = 0f,
     val lastSeen: Timestamp? = null,

@@ -74,6 +74,13 @@ class MainViewModel(
         }
     }
 
+    fun updateFcmToken(token: String) {
+        val uid = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            userRepository.updateFcmToken(uid, token)
+        }
+    }
+
     private fun loadLocalOnboardingStatus() {
         viewModelScope.launch {
             _onboardingCompleted.value = preferencesManager.isOnboardingCompleted.first()
