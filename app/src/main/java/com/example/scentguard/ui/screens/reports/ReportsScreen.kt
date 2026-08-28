@@ -62,6 +62,7 @@ fun ReportsScreen(
 
     val reportState by viewModel.reportState.collectAsState()
     val chartState by viewModel.chartState.collectAsState()
+    val liveData by mainViewModel.liveRestaurantData.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -179,7 +180,7 @@ fun ReportsScreen(
                                 ReportSkeleton()
                             }
                             is Resource.Success -> {
-                                ReportContent(state.data!!, chartState)
+                                ReportContent(state.data!!, chartState, liveData)
                             }
                             is Resource.Error -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -208,7 +209,7 @@ fun ReportsScreen(
 }
 
 @Composable
-fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
+fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>, liveData: com.example.scentguard.data.model.Restaurant?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -221,8 +222,55 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
         ScoreCard(report.airQualityScore)
         
         Spacer(modifier = Modifier.height(32.dp))
+
+        // Heads-Up Display: Current PPM and Status
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Current Level", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "${liveData?.currentGasPpm ?: 0} ppm",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                
+                val airStatus = liveData?.airStatus ?: "SAFE"
+                val statusColor = when (airStatus.uppercase()) {
+                    "SAFE" -> Color(0xFF34C759)
+                    "WARN" -> Color(0xFFFF9500)
+                    "DANGER" -> Color(0xFFFF3B30)
+                    else -> Color(0xFF34C759)
+                }
+                
+                Surface(
+                    color = statusColor.copy(alpha = 0.1f),
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
+                ) {
+                    Text(
+                        text = airStatus.uppercase(),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
         
-        Text(text = "Air quality trend", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(text = "Real-Time Gas Monitoring", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
         
         Surface(
@@ -233,13 +281,24 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>) {
         ) {
             Box(modifier = Modifier.padding(24.dp)) {
                 when (chartState) {
-                    is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().height(200.dp).shimmerEffect())
+                    is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().height(220.dp).shimmerEffect())
                     is Resource.Success -> ScentGuardChart(chartState.data!!)
                     is Resource.Error -> Text("Failed to load chart", color = MaterialTheme.colorScheme.error)
                     else -> {}
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // System Explanation Text
+        Text(
+            text = "Gas Level Monitoring shows changes in detected gas levels over time. SAFE indicates normal conditions, WARN indicates that attention may be needed, and DANGER indicates that immediate action is required. These levels are configured specifically for the ScentGuard system's MQ135 sensor calibration.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
         
