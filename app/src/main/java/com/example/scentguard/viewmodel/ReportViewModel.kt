@@ -40,8 +40,9 @@ class ReportViewModel(
         viewModelScope.launch {
             authRepository.userSession.collectLatest { session ->
                 if (session != null) {
-                    fetchDailyReport(session.restaurantId)
-                    fetchChartData(session.restaurantId)
+                    val rid = session.restaurantId
+                    fetchDailyReport(rid)
+                    fetchChartData(rid)
                 } else {
                     _reportState.value = Resource.Idle()
                     _chartState.value = Resource.Idle()

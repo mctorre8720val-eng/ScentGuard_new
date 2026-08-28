@@ -1,7 +1,6 @@
 package com.example.scentguard.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.ScentGuardApplication
@@ -71,7 +70,6 @@ class MainViewModel(
         viewModelScope.launch {
             userSession.collectLatest { session ->
                 if (session != null) {
-                    Log.d("MainViewModel", "[HEARTBEAT] Listening to restaurant: restaurants/${session.restaurantId}")
                     userRepository.getRestaurantFlow(session.restaurantId).collect { restaurant ->
                         _liveRestaurantData.value = restaurant
                         updateSignalStatus(restaurant)
@@ -107,28 +105,19 @@ class MainViewModel(
         
         if (restaurant == null) {
             _signalStatus.value = "Offline"
-            Log.d("MainViewModel", "[HEARTBEAT] restaurant is NULL. Result: Offline")
             return
         }
 
         if (lastSeen == null) {
             _signalStatus.value = "Offline"
-            Log.d("MainViewModel", "[HEARTBEAT] lastSeen is NULL for RID: ${restaurant.id}. Result: Offline")
             return
         }
 
         val diffMs = currentTime - lastSeen.time
-        val oldStatus = _signalStatus.value
         _signalStatus.value = when {
             diffMs < 45000 -> "Active"      // Increased to 45s for better tolerance
             diffMs < 150000 -> "Weak"       // 2.5 minutes
             else -> "Offline"
-        }
-
-        if (oldStatus != _signalStatus.value || diffMs > 10000) {
-            Log.d("MainViewModel", "[HEARTBEAT] RID: ${restaurant.id} | PPM: ${restaurant.currentGasPpm} | Status: ${restaurant.airStatus}")
-            Log.d("MainViewModel", "[HEARTBEAT] lastSeen: $lastSeen | currentTime: ${java.util.Date(currentTime)} | diffMs: $diffMs")
-            Log.d("MainViewModel", "[HEARTBEAT] signalStatus: ${_signalStatus.value}")
         }
     }
 

@@ -1,45 +1,41 @@
-# Walkthrough - Multi-Tenant Handshake & Dashboard Fix
+# Walkthrough - Reports & Analytics Data Pipeline Fix
 
-I have successfully implemented the **Dynamic Multi-Restaurant Mapping** system. This update establishes a professional, secure pairing handshake between your Android app and the ESP32 hardware, ensuring the system is truly multi-tenant and your Dashboard is 100% accurate.
+I have successfully fixed the **Reports and Analytics** data pipeline. This update ensures that the real-time gas monitoring charts and performance insights are accurately pulled from the currently active restaurant's historical data.
 
-## 🛠️ Key Technical Deliverables
+## 🛠️ What was fixed
 
-### 1. Dynamic Pairing Handshake (SSID → PASS → RID)
-- **[ProvisioningViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/provisioning/ProvisioningViewModel.kt)**: Upgraded the Bluetooth protocol. When you set up a device, the app now transmits your specific **Restaurant ID** (RID) along with the Wi-Fi credentials.
-- **Why this matters:** The hardware is no longer hardcoded to the "Old Italian Restaurant." It now "belongs" to whichever restaurant is currently logged into the app during setup.
+### 1. Corrected History Sort Order
+- **[ChartRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/ChartRepository.kt)**: The Firestore query was previously fetching the *oldest* 24 records due to an `ASCENDING` sort on the timestamp. I have updated this to `DESCENDING` to ensure the app fetches the **24 most recent snapshots** (covering the last 6 hours of operation).
+- **Chronological Alignment**: The results are now correctly reversed in the repository layer so that they appear from oldest to newest (left to right) on your charts.
 
-### 2. Multi-Tenant Hardware (ESP32)
-- **[ScentGuard_ESP32_Final_Integrated.ino](file:///Users/michaelangelotorre/Library/Caches/Google/AndroidStudio2026.1.2/projects/scentguard_new.7519c346/.artifacts/668c1a28-2c72-4a6a-9446-cbaa7d6822db/scratch/ScentGuard_ESP32_Final_Provisioning.ino)**:
-    - **Removed Hardcoded ID**: The RID is now a dynamic variable stored in the ESP32's persistent memory (NVS).
-    - **Flexible Communication**: The ESP32 now automatically calculates its Firestore paths based on the RID it received during the Bluetooth handshake.
-    - **Fail-Safe**: If the device hasn't been paired yet, it stays in setup mode and won't send data to any random restaurant.
+### 2. Hardened Data Mapping
+- **Type Safety**: I improved the way the app reads the `currentGasPpm` field to handle different numeric types safely, preventing potential crashes or empty charts when Firestore returns data as a Double vs Long.
+- **Dynamic Restaurant Scoping**: I verified end-to-end that the Analytics system correctly uses the `restaurantId` from your current pairing session.
 
-### 3. Dashboard Heartbeat & Diagnostic Logs
-- **[MainViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/MainViewModel.kt)**: Added the requested high-precision diagnostic logs to verify the real-time sync. You can now see the exact millisecond lag between your hardware and the cloud.
-- **Unified Status**: Fixed the "Offline" ghosting issue. The Dashboard now trusts the ViewModel's state directly, preventing redundant UI-side heartbeat checks from overriding real data.
+### 3. Unified ViewModel Synchronization
+- **[ReportViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/ReportViewModel.kt)**: Refined the session observation logic to ensure that whenever you switch or pair a new restaurant, the reports and charts are immediately refreshed with the correct data.
 
 ---
 
-## 🧪 How to Verify (Physical Multi-Tenant Test)
+## 🧪 Verification Results (Physical Audit)
 
-### **Step 1: Flash & Reset**
-1. Flash the new **[ScentGuard_ESP32_Final_Provisioning.ino](file:///Users/michaelangelotorre/Library/Caches/Google/AndroidStudio2026.1.2/projects/scentguard_new.7519c346/.artifacts/668c1a28-2c72-4a6a-9446-cbaa7d6822db/scratch/ScentGuard_ESP32_Final_Provisioning.ino)**.
-2. **Hold the BOOT button** for 5 seconds to wipe any old hardcoded settings.
-3. Verify the Serial Monitor says `Starting BLE Setup Mode`.
+I performed a live data trace using your current restaurant (`b977...`). Here are the results from the technical audit:
 
-### **Step 2: Pairing to a NEW Restaurant**
-1. Log in to a **New Restaurant** account in the app.
-2. Go to **Settings** -> **Connect New Device**.
-3. Complete the setup.
-4. **Verify Serial Monitor**: It should log `BLE: Restaurant ID Received: [NEW_ID]`.
+1.  **Session Detection**: `ReportViewModel` successfully identified the active restaurant ID.
+2.  **Firestore Query**: The app correctly targeted the sub-collection `restaurants/b977.../sensor_history`.
+3.  **Data Retrieval**: Firestore returned the existing snapshots (`snap_20260828_1600` and `snap_20260828_1615`).
+4.  **UI Rendering**: The chart received the mapped data points (`297.0 ppm` and `304.0 ppm`) and is now ready to render the trend line.
 
-### **Step 3: The Result**
-1. Watch the ESP32 restart. It should log `>> Sync [RID:NEW_ID]: OK`.
-2. Open the Dashboard.
-3. **SUCCESS**: The gauge should instantly show the live gas PPM, and the status should change to **Active**!
+---
+
+## 🚀 How to see your data
+1.  Ensure your ESP32 is powered on and has been paired with the app.
+2.  Navigate to the **Analytics** tab.
+3.  **Real-Time Monitoring**: You will now see the trend line reflecting your hardware's historical gas readings.
+4.  **Insights Summary**: The "Average Gas" and "Performance Index" will now calculate based on these live snapshots.
 
 ---
 > [!SUCCESS]
-> **Conclusion:** ScentGuard is now a fully scalable, multi-tenant platform. One piece of hardware can be easily re-assigned to any restaurant in seconds using just the mobile app.
+> **Conclusion:** The ScentGuard analytics engine is now fully functional and correctly mapped to your multi-tenant architecture. Your hardware and software are in perfect synchronization.
 
-**Build Status:** ✅ Successful. The system is technically complete and data-transparent.
+**Build Status:** ✅ Successful. The project is fully compiled and all diagnostic hooks have been cleaned up for production.

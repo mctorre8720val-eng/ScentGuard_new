@@ -20,13 +20,14 @@ class ChartRepository(
             val snapshot = firestore.collection("restaurants")
                 .document(restaurantId)
                 .collection("sensor_history")
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .limit(24) // Last 24 records (6 hours if every 15 mins)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(24)
                 .get()
                 .await()
                 
-            val points = snapshot.documents.mapIndexed { index, doc ->
-                val gas = doc.getLong("currentGasPpm")?.toFloat() ?: 0f
+            // Reversing the list to show data points from oldest to newest on the X-axis
+            val points = snapshot.documents.reversed().mapIndexed { index, doc ->
+                val gas = (doc.get("currentGasPpm") as? Number)?.toFloat() ?: 0f
                 val timestamp = doc.getTimestamp("timestamp")?.toDate() ?: Date()
                 val label = timeFormatter.format(timestamp)
                 ChartPoint(index.toFloat(), gas, label)
@@ -36,7 +37,7 @@ class ChartRepository(
                 ChartData(
                     points = points,
                     minVal = 0f,
-                    maxVal = 2000f, // Adjusted for typical dangerous PPM levels
+                    maxVal = 2000f,
                     unit = "ppm"
                 )
             )

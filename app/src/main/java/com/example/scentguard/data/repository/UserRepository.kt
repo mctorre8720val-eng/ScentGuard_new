@@ -98,7 +98,6 @@ class UserRepository(
                 }
                 
                 val restaurant = snapshot?.toObject(Restaurant::class.java)
-                Log.d("UserRepository", "New document snapshot for $restaurantId: ppm=${restaurant?.currentGasPpm}, air=${restaurant?.airStatus}, lastSeen=${restaurant?.lastSeen}")
                 trySend(restaurant)
             }
             

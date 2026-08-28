@@ -51,6 +51,11 @@ fun ReportsScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
+    val reportState by viewModel.reportState.collectAsState()
+    val chartState by viewModel.chartState.collectAsState()
+    val computedSummary by viewModel.computedSummary.collectAsState()
+    val liveData by mainViewModel.liveRestaurantData.collectAsState()
+    
     // Security check: Only Managers can access Reports
     if (user != null && user.role.uppercase() != "MANAGER") {
         LaunchedEffect(Unit) {
@@ -59,11 +64,6 @@ fun ReportsScreen(
             }
         }
     }
-
-    val reportState by viewModel.reportState.collectAsState()
-    val chartState by viewModel.chartState.collectAsState()
-    val computedSummary by viewModel.computedSummary.collectAsState()
-    val liveData by mainViewModel.liveRestaurantData.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
