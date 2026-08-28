@@ -179,6 +179,13 @@ fun SettingsScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
                         ActionItem(
+                            label = "Connect New Device",
+                            description = "Set up Wi-Fi for your ESP32",
+                            icon = Icons.Outlined.Bluetooth,
+                            onClick = { navController.navigate("provisioning") }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+                        ActionItem(
                             label = "About",
                             description = "ScentGuard v1.1.0",
                             icon = Icons.Outlined.Info,

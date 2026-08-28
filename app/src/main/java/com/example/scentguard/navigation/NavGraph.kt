@@ -9,6 +9,7 @@ import com.example.scentguard.ui.screens.devices.DevicesScreen
 import com.example.scentguard.ui.screens.history.HistoryScreen
 import com.example.scentguard.ui.screens.notifications.NotificationsScreen
 import com.example.scentguard.ui.screens.settings.SettingsScreen
+import com.example.scentguard.ui.screens.provisioning.ProvisioningScreen
 import com.example.scentguard.ui.screens.login.ForgotPasswordScreen
 import com.example.scentguard.ui.screens.login.LoginScreen
 import com.example.scentguard.ui.screens.onboarding.OnboardingScreen
@@ -63,6 +64,9 @@ fun SetupNavGraph(
         }
         composable(Screen.Settings.route) { 
             SettingsScreen(navController = navController, mainViewModel = mainViewModel)
+        }
+        composable("provisioning") {
+            ProvisioningScreen(navController = navController, mainViewModel = mainViewModel)
         }
         composable(Screen.Profile.route) { 
             ProfileScreen(navController = navController, mainViewModel = mainViewModel)

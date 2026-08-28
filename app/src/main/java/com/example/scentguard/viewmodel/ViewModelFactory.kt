@@ -38,6 +38,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             modelClass.isAssignableFrom(ReportViewModel::class.java) -> {
                 ReportViewModel(app.reportRepository, app.chartRepository, app.authRepository) as T
             }
+            modelClass.isAssignableFrom(com.example.scentguard.ui.screens.provisioning.ProvisioningViewModel::class.java) -> {
+                com.example.scentguard.ui.screens.provisioning.ProvisioningViewModel(app) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class: \${modelClass.name}")
         }
     }

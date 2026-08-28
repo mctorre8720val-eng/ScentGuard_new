@@ -1,5 +1,6 @@
 package com.example.scentguard.ui.screens.dashboard
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -47,17 +48,12 @@ fun DashboardScreen(
     val recentActivity by mainViewModel.recentActivity.collectAsState()
     val signalStatus by mainViewModel.signalStatus.collectAsState()
     
-    // Heartbeat logic: Consider "Online" if lastSeen is within 2 minutes
-    var isOnline by remember { mutableStateOf(false) }
-    
-    LaunchedEffect(liveData?.lastSeen) {
-        val lastSeenDate = liveData?.lastSeen?.toDate()
-        if (lastSeenDate == null) {
-            isOnline = false
-        } else {
-            val diffMs = System.currentTimeMillis() - lastSeenDate.time
-            isOnline = diffMs < TimeUnit.MINUTES.toMillis(2)
-        }
+    // Unify "Online" status with ViewModel's Signal Status
+    val isOnline = signalStatus == "Active" || signalStatus == "Weak"
+
+    // Debugging Trace: Log on every recomposition to see what the UI is actually seeing
+    SideEffect {
+        Log.d("DashboardScreen", "[UI_RECOMPOSE] rid=${liveData?.id} | isOnline=$isOnline | signalStatus=$signalStatus | ppm=${liveData?.currentGasPpm}")
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
