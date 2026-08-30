@@ -45,8 +45,8 @@ class ReportViewModel(
                 if (session != null) {
                     val rid = session.restaurantId
                     fetchDailyReport(rid)
-                    fetchChartData(rid)
-                    fetchTempChartData(rid)
+                    fetchChartData(isWeekly = false, restaurantId = rid)
+                    fetchTempChartData(isWeekly = false, restaurantId = rid)
                 } else {
                     _reportState.value = Resource.Idle()
                     _chartState.value = Resource.Idle()
@@ -57,11 +57,11 @@ class ReportViewModel(
         }
     }
 
-    fun fetchTempChartData(restaurantId: String? = null) {
+    fun fetchTempChartData(isWeekly: Boolean = false, restaurantId: String? = null) {
         val rid = restaurantId ?: authRepository.userSession.value?.restaurantId ?: return
         viewModelScope.launch {
             _tempChartState.value = Resource.Loading()
-            val result = chartRepository.getTemperatureHistory(rid)
+            val result = chartRepository.getTemperatureHistory(rid, isWeekly)
             result.onSuccess { data ->
                 _tempChartState.value = Resource.Success(data)
                 updateSummaryWithTemp(data)
@@ -81,60 +81,55 @@ class ReportViewModel(
         }
     }
 
-    fun fetchChartData(restaurantId: String? = null) {
+    fun fetchChartData(isWeekly: Boolean = false, restaurantId: String? = null) {
         val rid = restaurantId ?: authRepository.userSession.value?.restaurantId ?: return
         viewModelScope.launch {
             _chartState.value = Resource.Loading()
-            val result = chartRepository.getGasLevelHistory(rid)
+            val result = chartRepository.getGasLevelHistory(rid, isWeekly)
             result.onSuccess { data ->
                 _chartState.value = Resource.Success(data)
-                computeSummaryFromData(data, rid)
+                computeSummaryFromData(data, rid, isWeekly)
             }.onFailure {
                 _chartState.value = Resource.Error(it.message ?: "Failed to load chart")
             }
         }
     }
 
-    private fun computeSummaryFromData(data: ChartData, rid: String) {
+    private fun computeSummaryFromData(data: ChartData, rid: String, isWeekly: Boolean = false) {
         viewModelScope.launch {
             val points = data.points
             if (points.isEmpty()) {
                 _computedSummary.value = ReportSummary(
                     avgGasLevel = "0 ppm",
                     totalFanRuntime = "0m",
-                    airQualityScore = 0, // Will show "Stabilizing"
+                    airQualityScore = 0,
                     alertsCount = 0,
-                    period = "Daily"
+                    period = if (isWeekly) "Weekly" else "Daily"
                 )
                 return@launch
             }
 
-            // 1. Average Gas (Existing logic is fine)
+            // 1. Average Gas
             val avgGas = points.map { it.y }.average().toInt()
 
-            // 2. Total Alerts (Now counting DANGER snapshots in history)
-            // Note: ChartData points are derived from sensor_history snapshots
-            // We'll rely on the status field which should be part of the raw snapshot data.
-            // Since ChartPoint only has x,y,label, we should fetch the raw status from Firestore if needed,
-            // but for better efficiency, let's assume we can determine DANGER from the Y value (PPM) 
-            // since we know the threshold is 1500.
+            // 2. Total Alerts
             val dangerSnapshots = points.count { it.y >= 1500f }
             val totalSnapshots = points.size
 
-            // 3. Performance Index: 100 - (DangerSnapshots / TotalSnapshots * 100)
+            // 3. Performance Index
             val performanceScore = if (totalSnapshots > 0) {
                 (100 - (dangerSnapshots.toFloat() / totalSnapshots * 100)).toInt()
             } else 0
 
-            // 4. Fan Runtime: Calculated from actual fanStatus data in sensor_history
-            // We need to fetch the raw documents to see fanStatus
+            // 4. Fan Runtime
             var totalMinutes = 0
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             try {
+                val limit = if (isWeekly) 1000 else 96
                 val snapshot = db.collection("restaurants").document(rid)
                     .collection("sensor_history")
                     .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .limit(24)
+                    .limit(limit.toLong())
                     .get()
                     .await()
                 
@@ -144,7 +139,7 @@ class ReportViewModel(
                     }
                 }
             } catch (e: Exception) {
-                // Fallback or log error
+                // Fallback
             }
 
             val runtimeText = if (totalMinutes >= 60) {
@@ -158,7 +153,7 @@ class ReportViewModel(
                 totalFanRuntime = runtimeText,
                 airQualityScore = performanceScore,
                 alertsCount = dangerSnapshots,
-                period = "Daily"
+                period = if (isWeekly) "Weekly" else "Daily"
             )
         }
     }
@@ -167,6 +162,8 @@ class ReportViewModel(
         val rid = restaurantId ?: authRepository.userSession.value?.restaurantId ?: return
         viewModelScope.launch {
             _reportState.value = Resource.Loading()
+            fetchChartData(isWeekly = false, restaurantId = rid)
+            fetchTempChartData(isWeekly = false, restaurantId = rid)
             val result = reportRepository.getDailyReport(rid)
             result.onSuccess {
                 _reportState.value = Resource.Success(it)
@@ -180,6 +177,8 @@ class ReportViewModel(
         val rid = restaurantId ?: authRepository.userSession.value?.restaurantId ?: return
         viewModelScope.launch {
             _reportState.value = Resource.Loading()
+            fetchChartData(isWeekly = true, restaurantId = rid)
+            fetchTempChartData(isWeekly = true, restaurantId = rid)
             val result = reportRepository.getWeeklyReport(rid)
             result.onSuccess {
                 _reportState.value = Resource.Success(it)

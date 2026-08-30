@@ -26,6 +26,7 @@ import com.example.scentguard.ui.components.ScentGuardFanControl
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.ReportViewModel
 import com.example.scentguard.viewmodel.ViewModelFactory
@@ -45,6 +46,9 @@ fun DevicesScreen(
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val scrollState = rememberScrollState()
+    val isNavVisible = scrollState.isScrollingUp()
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -93,7 +97,7 @@ fun DevicesScreen(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -144,6 +148,7 @@ fun DevicesScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = "devices",
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }

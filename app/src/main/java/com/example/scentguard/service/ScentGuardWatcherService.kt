@@ -31,6 +31,8 @@ class ScentGuardWatcherService : Service() {
     private var lastKnownAirStatus: String? = null
     private var lastKnownFanStatus: String? = null
     
+    private var isAlarmAcknowledged = false
+    
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var alertAudioManager: AlertAudioManager? = null
     
@@ -60,6 +62,7 @@ class ScentGuardWatcherService : Service() {
                 }
             }
             ACTION_STOP_ALARM -> {
+                isAlarmAcknowledged = true
                 alertAudioManager?.stopAlarm()
             }
             ACTION_STOP -> {
@@ -114,17 +117,23 @@ class ScentGuardWatcherService : Service() {
                     
                     if (lastKnownAirStatus != null && lastKnownAirStatus != currentAirStatus) {
                         handleAirStatusTransition(restaurantId, lastKnownAirStatus!!, currentAirStatus, gasPpm.toInt(), temp, lastSeen)
+                        
+                        // Reset acknowledgment when condition clears
+                        if (currentAirStatus == "SAFE" || currentAirStatus == "WARN") {
+                            isAlarmAcknowledged = false
+                        }
                     }
 
                     // Audio Alarm Management
                     if (isOnline && currentAirStatus == "DANGER") {
-                        // Critical + alarm not playing -> start
-                        if (alertAudioManager?.isPlaying() == false) {
+                        // Critical + alarm not playing + not acknowledged -> start
+                        if (!isAlarmAcknowledged && alertAudioManager?.isPlaying() == false) {
                             startAudioAlarm()
                         }
                     } else if (alertAudioManager?.isPlaying() == true) {
                         // No longer critical -> stop
                         alertAudioManager?.stopAlarm()
+                        isAlarmAcknowledged = false // Reset for next time
                     }
                     
                     // 2. Fan Status Transitions

@@ -1,6 +1,6 @@
 package com.example.scentguard.ui.components
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +29,7 @@ import com.example.scentguard.navigation.Screen
 fun ScentGuardFloatingNav(
     user: UserProfile?,
     currentRoute: String?,
+    isVisible: Boolean = true,
     onNavigate: (String) -> Unit
 ) {
     Box(
@@ -38,54 +39,60 @@ fun ScentGuardFloatingNav(
             .padding(bottom = 24.dp), // Optimized Thumb Zone
         contentAlignment = Alignment.BottomCenter
     ) {
-        Surface(
-            modifier = Modifier
-                .height(72.dp)
-                .widthIn(max = 400.dp)
-                .padding(horizontal = 24.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-            shape = CircleShape,
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-            )
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                modifier = Modifier
+                    .height(72.dp)
+                    .widthIn(max = 400.dp)
+                    .padding(horizontal = 24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                shape = CircleShape,
+                shadowElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                )
             ) {
-                NavItem(
-                    label = "Home",
-                    route = Screen.Dashboard.route,
-                    icon = Icons.Outlined.Dashboard,
-                    selected = currentRoute == Screen.Dashboard.route,
-                    onNavigate = onNavigate
-                )
-                
-                NavItem(
-                    label = "History",
-                    route = Screen.History.route,
-                    icon = Icons.Outlined.History,
-                    selected = currentRoute == Screen.History.route,
-                    onNavigate = onNavigate
-                )
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    NavItem(
+                        label = "Home",
+                        route = Screen.Dashboard.route,
+                        icon = Icons.Outlined.Dashboard,
+                        selected = currentRoute == Screen.Dashboard.route,
+                        onNavigate = onNavigate
+                    )
+                    
+                    NavItem(
+                        label = "History",
+                        route = Screen.History.route,
+                        icon = Icons.Outlined.History,
+                        selected = currentRoute == Screen.History.route,
+                        onNavigate = onNavigate
+                    )
 
-                NavItem(
-                    label = "Alerts",
-                    route = Screen.Notifications.route,
-                    icon = Icons.Outlined.Notifications,
-                    selected = currentRoute == Screen.Notifications.route,
-                    onNavigate = onNavigate
-                )
-                NavItem(
-                    label = "Profile",
-                    route = Screen.Profile.route,
-                    icon = Icons.Outlined.Person,
-                    selected = currentRoute == Screen.Profile.route,
-                    onNavigate = onNavigate
-                )
+                    NavItem(
+                        label = "Alerts",
+                        route = Screen.Notifications.route,
+                        icon = Icons.Outlined.Notifications,
+                        selected = currentRoute == Screen.Notifications.route,
+                        onNavigate = onNavigate
+                    )
+                    NavItem(
+                        label = "Profile",
+                        route = Screen.Profile.route,
+                        icon = Icons.Outlined.Person,
+                        selected = currentRoute == Screen.Profile.route,
+                        onNavigate = onNavigate
+                    )
+                }
             }
         }
     }

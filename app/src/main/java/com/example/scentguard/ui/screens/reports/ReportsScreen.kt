@@ -1,5 +1,6 @@
 package com.example.scentguard.ui.screens.reports
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +37,7 @@ import com.example.scentguard.ui.theme.ErrorRed
 import com.example.scentguard.ui.theme.PremiumGreen
 import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
@@ -63,6 +65,9 @@ fun ReportsScreen(
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val scrollState = rememberScrollState()
+    val isNavVisible = scrollState.isScrollingUp()
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -176,7 +181,7 @@ fun ReportsScreen(
                                 ReportSkeleton()
                             }
                             is Resource.Success -> {
-                                ReportContent(computedSummary, chartState, tempChartState, liveData)
+                                ReportContent(computedSummary, chartState, tempChartState, liveData, scrollState)
                             }
                             is Resource.Error -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -192,6 +197,7 @@ fun ReportsScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Reports.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }
@@ -209,13 +215,14 @@ fun ReportContent(
     report: ReportSummary, 
     chartState: Resource<ChartData>, 
     tempChartState: Resource<ChartData>,
-    liveData: com.example.scentguard.data.model.Restaurant?
+    liveData: com.example.scentguard.data.model.Restaurant?,
+    scrollState: ScrollState = rememberScrollState()
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .responsiveContainer(maxWidth = 600.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))

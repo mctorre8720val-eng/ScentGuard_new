@@ -2,7 +2,9 @@ package com.example.scentguard.ui.screens.history
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +28,7 @@ import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.HistoryViewModel
@@ -52,6 +55,9 @@ fun HistoryScreen(
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val lazyListState = rememberLazyListState()
+    val isNavVisible = lazyListState.isScrollingUp()
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -181,6 +187,7 @@ fun HistoryScreen(
                                 HistoryList(
                                     items = filteredItems, 
                                     isLoadingMore = isLoadingMore,
+                                    lazyListState = lazyListState,
                                     onLoadMore = { viewModel.loadNextPage() }
                                 )
                             }
@@ -203,6 +210,7 @@ fun HistoryScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.History.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }
@@ -219,6 +227,7 @@ fun HistoryScreen(
 fun HistoryList(
     items: List<HistoryItem>,
     isLoadingMore: Boolean,
+    lazyListState: LazyListState = rememberLazyListState(),
     onLoadMore: () -> Unit
 ) {
     if (items.isEmpty()) {
@@ -248,6 +257,7 @@ fun HistoryList(
         }
     } else {
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

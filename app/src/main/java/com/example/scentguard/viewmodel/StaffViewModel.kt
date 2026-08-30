@@ -98,12 +98,12 @@ class StaffViewModel(
         }
     }
 
-    fun refreshInviteCode(restaurantId: String, durationHours: Long = 24) {
+    fun refreshInviteCode(restaurantId: String, durationHours: Long = 24, userRole: String? = null) {
         viewModelScope.launch {
             _isRefreshingCode.value = true
             val result = userRepository.refreshInviteCode(restaurantId, durationHours)
             if (result.isSuccess) {
-                fetchRestaurantInfo(restaurantId)
+                fetchRestaurantInfo(restaurantId, userRole)
             }
             _isRefreshingCode.value = false
         }

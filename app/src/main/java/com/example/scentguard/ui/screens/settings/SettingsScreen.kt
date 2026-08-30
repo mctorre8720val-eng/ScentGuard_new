@@ -26,6 +26,7 @@ import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import com.example.scentguard.viewmodel.SettingsViewModel
@@ -52,6 +53,9 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     
     var showThemeDialog by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
+    val isNavVisible = scrollState.isScrollingUp()
 
     if (showThemeDialog) {
         AlertDialog(
@@ -121,7 +125,7 @@ fun SettingsScreen(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .responsiveContainer(maxWidth = 480.dp)
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -155,6 +159,8 @@ fun SettingsScreen(
                             checked = fanAlerts,
                             onCheckedChange = { viewModel.toggleFanAlerts(it) }
                         )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+                        AlertSoundSection(viewModel)
                     }
 
                     // Move Hardware Configuration to be more prominent
@@ -202,6 +208,7 @@ fun SettingsScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Settings.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }

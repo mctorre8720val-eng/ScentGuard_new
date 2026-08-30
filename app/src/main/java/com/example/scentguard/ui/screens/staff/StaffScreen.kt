@@ -2,7 +2,9 @@ package com.example.scentguard.ui.screens.staff
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,7 @@ import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.components.ScentGuardMascotAvatar
 import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
@@ -57,6 +60,9 @@ fun StaffScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    val lazyListState = rememberLazyListState()
+    val isNavVisible = lazyListState.isScrollingUp()
 
     var userToRemove by remember { mutableStateOf<UserProfile?>(null) }
     var selectedDuration by remember { mutableLongStateOf(24L) }
@@ -163,7 +169,7 @@ fun StaffScreen(
                             timeRemaining = timeRemaining,
                             selectedDuration = selectedDuration,
                             onDurationChange = { selectedDuration = it },
-                            onRefresh = { staffViewModel.refreshInviteCode(restaurant.id, selectedDuration) }
+                            onRefresh = { staffViewModel.refreshInviteCode(restaurant.id, selectedDuration, user?.role) }
                         )
                     }
 
@@ -187,6 +193,7 @@ fun StaffScreen(
                                 } else {
                                     StaffList(
                                         staff = staffList,
+                                        lazyListState = lazyListState,
                                         onRemove = { member -> userToRemove = member },
                                         currentUserRole = user?.role ?: ""
                                     )
@@ -223,6 +230,7 @@ fun StaffScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = "staff",
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }
@@ -332,8 +340,9 @@ fun DurationChip(label: String, value: Long, selected: Boolean, onClick: (Long) 
 }
 
 @Composable
-fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit, currentUserRole: String) {
+fun StaffList(staff: List<UserProfile>, lazyListState: LazyListState, onRemove: (UserProfile) -> Unit, currentUserRole: String) {
     LazyColumn(
+        state = lazyListState,
         modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)

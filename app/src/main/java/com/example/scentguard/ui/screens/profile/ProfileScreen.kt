@@ -32,6 +32,7 @@ import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.components.ScentGuardMascotAvatar
 import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -50,6 +51,9 @@ fun ProfileScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showAvatarPicker by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
+    val isNavVisible = scrollState.isScrollingUp()
 
     if (showAvatarPicker) {
         AvatarPickerSheet(
@@ -117,7 +121,7 @@ fun ProfileScreen(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(horizontal = 24.dp)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .responsiveContainer(maxWidth = 480.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -186,6 +190,7 @@ fun ProfileScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Profile.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }

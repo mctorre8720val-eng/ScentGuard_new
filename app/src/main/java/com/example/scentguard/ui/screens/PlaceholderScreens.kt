@@ -109,6 +109,7 @@ fun PlaceholderScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = currentRoute,
+                isVisible = true, // No scrolling in placeholders
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.navigation.Screen
@@ -32,6 +33,7 @@ import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.components.ScentGuardMascotAvatar
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,6 +57,9 @@ fun DashboardScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val lazyListState = rememberLazyListState()
+    val isNavVisible = lazyListState.isScrollingUp()
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -107,6 +112,7 @@ fun DashboardScreen(
                 containerColor = MaterialTheme.colorScheme.background
             ) { padding ->
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -196,6 +202,7 @@ fun DashboardScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Dashboard.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }

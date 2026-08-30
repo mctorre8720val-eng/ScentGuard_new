@@ -3,7 +3,9 @@ package com.example.scentguard.ui.screens.notifications
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +29,7 @@ import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.theme.WarningOrange
 import com.example.scentguard.utils.Resource
+import com.example.scentguard.utils.isScrollingUp
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
 import com.example.scentguard.viewmodel.MainViewModel
@@ -49,6 +52,9 @@ fun NotificationsScreen(
     val notificationsState by viewModel.notificationsState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    val lazyListState = rememberLazyListState()
+    val isNavVisible = lazyListState.isScrollingUp()
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -104,7 +110,7 @@ fun NotificationsScreen(
                             NotificationSkeletonList()
                         }
                         is Resource.Success -> {
-                            NotificationList(state.data ?: emptyList())
+                            NotificationList(state.data ?: emptyList(), lazyListState)
                         }
                         is Resource.Error -> {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -124,6 +130,7 @@ fun NotificationsScreen(
             ScentGuardFloatingNav(
                 user = user,
                 currentRoute = Screen.Notifications.route,
+                isVisible = isNavVisible,
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.Dashboard.route) { saveState = true }
@@ -137,13 +144,14 @@ fun NotificationsScreen(
 }
 
 @Composable
-fun NotificationList(items: List<NotificationItem>) {
+fun NotificationList(items: List<NotificationItem>, lazyListState: LazyListState = rememberLazyListState()) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No new alerts", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
