@@ -9,19 +9,41 @@ import kotlinx.coroutines.tasks.await
 class HistoryRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    suspend fun getHistory(restaurantId: String): Result<List<HistoryItem>> {
-        if (restaurantId.isBlank()) return Result.success(emptyList())
+    suspend fun getHistory(
+        restaurantId: String,
+        limit: Long = 50,
+        lastDocument: com.google.firebase.firestore.DocumentSnapshot? = null,
+        category: String? = null,
+        startDate: java.util.Date? = null
+    ): Result<com.google.firebase.firestore.QuerySnapshot> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid Restaurant ID"))
         
         return try {
-            val snapshot = firestore.collection("restaurants")
+            var query = firestore.collection("restaurants")
                 .document(restaurantId)
                 .collection("logs")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .await()
-                
-            val logs = snapshot.toObjects(HistoryItem::class.java)
-            Result.success(logs)
+
+            if (category != null && category != "All") {
+                when (category) {
+                    "Alerts" -> query = query.whereIn("type", listOf("ALERT", "WARNING"))
+                    "Fan" -> query = query.whereIn("eventType", listOf("FAN_ON", "FAN_OFF"))
+                    "Devices" -> query = query.whereIn("eventType", listOf("DEVICE_CONNECT", "DEVICE_DISCONNECT"))
+                    "Users" -> query = query.whereIn("eventType", listOf("USER_LOGIN", "USER_CHANGE", "MEMBER_JOIN", "MEMBER_REMOVE"))
+                    "System" -> query = query.whereIn("eventType", listOf("SYSTEM_START", "SYSTEM_UPDATE", "AIR_SAFE"))
+                }
+            }
+
+            if (startDate != null) {
+                query = query.whereGreaterThanOrEqualTo("timestamp", com.google.firebase.Timestamp(startDate))
+            }
+
+            if (lastDocument != null) {
+                query = query.startAfter(lastDocument)
+            }
+
+            val snapshot = query.limit(limit).get().await()
+            Result.success(snapshot)
         } catch (e: Exception) {
             Result.failure(e)
         }

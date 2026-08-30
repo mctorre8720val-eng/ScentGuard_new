@@ -64,15 +64,13 @@ fun ScentGuardFloatingNav(
                     onNavigate = onNavigate
                 )
                 
-                if (user?.role?.uppercase() == "MANAGER") {
-                    NavItem(
-                        label = "History",
-                        route = Screen.History.route,
-                        icon = Icons.Outlined.History,
-                        selected = currentRoute == Screen.History.route,
-                        onNavigate = onNavigate
-                    )
-                }
+                NavItem(
+                    label = "History",
+                    route = Screen.History.route,
+                    icon = Icons.Outlined.History,
+                    selected = currentRoute == Screen.History.route,
+                    onNavigate = onNavigate
+                )
 
                 NavItem(
                     label = "Alerts",

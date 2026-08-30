@@ -226,7 +226,6 @@ class UserRepository(
             val query = withTimeout(TIMEOUT_MS) {
                 db.collection("users")
                     .whereEqualTo("restaurantId", restaurantId)
-                    .whereEqualTo("role", "STAFF") // Standardized to uppercase
                     .get()
                     .await()
             }

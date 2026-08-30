@@ -48,14 +48,6 @@ fun StaffScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    if (user != null && user.role.uppercase() != "MANAGER") {
-        LaunchedEffect(Unit) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(Screen.Dashboard.route) { inclusive = true }
-            }
-        }
-    }
-
     val staffState by staffViewModel.staffList.collectAsState()
     val restaurantState by staffViewModel.restaurantInfo.collectAsState()
     val isRefreshing by staffViewModel.isRefreshingCode.collectAsState()
@@ -69,10 +61,10 @@ fun StaffScreen(
     var userToRemove by remember { mutableStateOf<UserProfile?>(null) }
     var selectedDuration by remember { mutableLongStateOf(24L) }
 
-    LaunchedEffect(user?.restaurantId) {
+    LaunchedEffect(user?.restaurantId, user?.role) {
         user?.restaurantId?.let { 
             staffViewModel.fetchStaff(it)
-            staffViewModel.fetchRestaurantInfo(it)
+            staffViewModel.fetchRestaurantInfo(it, user.role)
         }
     }
 
@@ -140,8 +132,9 @@ fun StaffScreen(
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
+                            val titleText = if (!user?.restaurantName.isNullOrBlank()) "${user?.restaurantName}" else "Staff Management"
                             Text(
-                                "Staff Management",
+                                titleText,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -163,7 +156,7 @@ fun StaffScreen(
                 ) {
                     
                     val restaurant = (restaurantState as? Resource.Success)?.data
-                    if (restaurant != null) {
+                    if (restaurant != null && user?.role?.uppercase() == "MANAGER") {
                         InviteCodeCard(
                             restaurant = restaurant,
                             isRefreshing = isRefreshing,
@@ -174,8 +167,9 @@ fun StaffScreen(
                         )
                     }
 
+                    val staffHeading = if (!user?.restaurantName.isNullOrBlank()) "${user?.restaurantName} Staff" else "Current Staff"
                     Text(
-                        "Current Staff",
+                        staffHeading,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
@@ -189,11 +183,12 @@ fun StaffScreen(
                             is Resource.Success -> {
                                 val staffList = state.data ?: emptyList()
                                 if (staffList.isEmpty()) {
-                                    EmptyStaffState()
+                                    EmptyStaffState(user?.restaurantName)
                                 } else {
                                     StaffList(
                                         staff = staffList,
-                                        onRemove = { member -> userToRemove = member }
+                                        onRemove = { member -> userToRemove = member },
+                                        currentUserRole = user?.role ?: ""
                                     )
                                 }
                             }
@@ -259,7 +254,7 @@ fun InviteCodeCard(
     ) {
         Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                "Staff Invitation Code",
+                if (!restaurant.name.isNullOrBlank()) "${restaurant.name} Invite Code" else "Staff Invitation Code",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -337,14 +332,14 @@ fun DurationChip(label: String, value: Long, selected: Boolean, onClick: (Long) 
 }
 
 @Composable
-fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit) {
+fun StaffList(staff: List<UserProfile>, onRemove: (UserProfile) -> Unit, currentUserRole: String) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().responsiveContainer(maxWidth = 600.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(staff) { member ->
-            StaffCard(member, onRemove)
+            StaffCard(member, onRemove, currentUserRole)
         }
         item { Spacer(modifier = Modifier.height(112.dp)) }
     }
@@ -363,7 +358,7 @@ fun StaffSkeletonList() {
 }
 
 @Composable
-fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
+fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit, currentUserRole: String) {
     val joinDate = remember(member.createdAt) {
         if (member.createdAt != null) {
             SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(member.createdAt.toDate())
@@ -407,21 +402,28 @@ fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(member.fullName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(member.role, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
                 Text("Joined: $joinDate", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { onRemove(member) }) {
-                Icon(Icons.Outlined.PersonRemove, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+            if (currentUserRole.uppercase() == "MANAGER") {
+                IconButton(onClick = { onRemove(member) }) {
+                    Icon(Icons.Outlined.PersonRemove, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                }
             }
         }
     }
 }
 
 @Composable
-fun EmptyStaffState() {
+fun EmptyStaffState(restaurantName: String?) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Outlined.People, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-            Text("No staff members yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                if (!restaurantName.isNullOrBlank()) "No staff at $restaurantName yet" else "No staff members yet", 
+                style = MaterialTheme.typography.titleLarge, 
+                fontWeight = FontWeight.Bold
+            )
             Text("Share your invite code to add staff", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }

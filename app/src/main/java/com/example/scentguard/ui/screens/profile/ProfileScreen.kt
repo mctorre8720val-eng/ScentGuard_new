@@ -141,7 +141,8 @@ fun ProfileScreen(
                     infoItems.add(ProfileInfoItem("Restaurant", user?.restaurantName ?: "N/A", Icons.Outlined.Restaurant))
                     
                     if (user?.role?.uppercase() == "MANAGER") {
-                        infoItems.add(ProfileInfoItem("Invite Code", "Check Staff Section", Icons.Outlined.VpnKey, isClickable = true))
+                        val teamLabel = if (!user.restaurantName.isNullOrBlank()) "Check ${user.restaurantName} Team" else "Check Staff Section"
+                        infoItems.add(ProfileInfoItem("Invite Code", teamLabel, Icons.Outlined.VpnKey, isClickable = true))
                     }
                     
                     ProfileInfoCard(items = infoItems)

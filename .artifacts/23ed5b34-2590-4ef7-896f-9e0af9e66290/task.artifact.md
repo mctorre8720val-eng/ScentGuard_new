@@ -1,12 +1,15 @@
-# Tasks - Mascot Selection Feedback Flow
+# Tasks - History Scaling & DHT11 Integration
 
-- [x] Modify `AvatarPickerSheet.kt`
-    - [x] Add state for confirmation dialog
-    - [x] Implement Material 3 `AlertDialog`
-    - [x] Update `MascotTile` with checkmark and selection logic
-- [x] Modify `ProfileScreen.kt`
-    - [x] Add `SnackbarHostState`
-    - [x] Add `SnackbarHost` to `Scaffold`
-    - [x] Trigger Snackbar on successful mascot change
-- [x] Build project to verify compilation
-- [x] Create Walkthrough
+- [x] **History Scalability**
+    - [x] Update `HistoryRepository.kt` with pagination and filtering support
+    - [x] Update `HistoryViewModel.kt` to manage pagination and filter state
+    - [x] Update `HistoryScreen.kt` with Filter Chips and "Load More"
+- [x] **DHT11 Android Integration**
+    - [x] Update `DashboardScreen.kt` to display live temperature
+    - [x] Update `ChartRepository.kt` to fetch temperature history
+    - [x] Update `ReportViewModel.kt` to handle temperature chart data
+    - [x] Update `ReportsScreen.kt` to display Temperature Trend chart
+- [x] **Verification**
+    - [x] Build project with `gradlew :app:assembleDebug`
+    - [x] Prepare ESP32 firmware instructions
+    - [x] Create Walkthrough

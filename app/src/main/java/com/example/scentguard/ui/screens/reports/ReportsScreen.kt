@@ -55,17 +55,10 @@ fun ReportsScreen(
     
     val reportState by viewModel.reportState.collectAsState()
     val chartState by viewModel.chartState.collectAsState()
+    val tempChartState by viewModel.tempChartState.collectAsState()
     val computedSummary by viewModel.computedSummary.collectAsState()
     val liveData by mainViewModel.liveRestaurantData.collectAsState()
     
-    // Security check: Only Managers can access Reports
-    if (user != null && user.role.uppercase() != "MANAGER") {
-        LaunchedEffect(Unit) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(Screen.Dashboard.route) { inclusive = true }
-            }
-        }
-    }
     var selectedTab by remember { mutableIntStateOf(0) }
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -183,7 +176,7 @@ fun ReportsScreen(
                                 ReportSkeleton()
                             }
                             is Resource.Success -> {
-                                ReportContent(computedSummary, chartState, liveData)
+                                ReportContent(computedSummary, chartState, tempChartState, liveData)
                             }
                             is Resource.Error -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -212,7 +205,12 @@ fun ReportsScreen(
 }
 
 @Composable
-fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>, liveData: com.example.scentguard.data.model.Restaurant?) {
+fun ReportContent(
+    report: ReportSummary, 
+    chartState: Resource<ChartData>, 
+    tempChartState: Resource<ChartData>,
+    liveData: com.example.scentguard.data.model.Restaurant?
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -311,6 +309,40 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>, liveDa
             }
         }
 
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "System Temperature Trend", 
+            style = MaterialTheme.typography.titleLarge, 
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        ScentGuardCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = 16.dp
+        ) {
+            Box(modifier = Modifier.padding(8.dp)) {
+                when (tempChartState) {
+                    is Resource.Loading -> Box(modifier = Modifier.fillMaxWidth().height(220.dp).shimmerEffect())
+                    is Resource.Success -> {
+                        if (tempChartState.data?.points?.isEmpty() == true) {
+                            Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.Thermostat, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                    Text("Insufficient data", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
+                                }
+                            }
+                        } else {
+                            ScentGuardChart(tempChartState.data!!)
+                        }
+                    }
+                    is Resource.Error -> Text("Failed to load temp chart", color = MaterialTheme.colorScheme.error)
+                    else -> {}
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // System Explanation Text
@@ -333,6 +365,7 @@ fun ReportContent(report: ReportSummary, chartState: Resource<ChartData>, liveDa
         
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ReportMetricItem("Average Gas", report.avgGasLevel, Icons.Outlined.Cloud, PremiumGreen)
+            ReportMetricItem("Average Temp", report.avgTemp, Icons.Outlined.Thermostat, Color(0xFF007AFF))
             ReportMetricItem("Fan Activity", report.totalFanRuntime, Icons.Outlined.Timer, WarningOrange)
             ReportMetricItem("Critical Alerts", report.alertsCount.toString(), Icons.Outlined.Warning, ErrorRed)
         }

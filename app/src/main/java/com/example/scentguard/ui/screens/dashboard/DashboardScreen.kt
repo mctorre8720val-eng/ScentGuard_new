@@ -432,7 +432,7 @@ fun MetricsGrid(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             MetricCard(
                 label = "System Temp",
-                value = temp.toInt().toString(),
+                value = String.format(java.util.Locale.getDefault(), "%.1f", temp),
                 unit = "°C",
                 icon = Icons.Outlined.Thermostat,
                 modifier = Modifier.weight(1f)

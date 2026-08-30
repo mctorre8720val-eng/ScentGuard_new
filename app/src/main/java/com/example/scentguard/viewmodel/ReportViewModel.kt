@@ -29,6 +29,9 @@ class ReportViewModel(
     private val _chartState = MutableStateFlow<Resource<ChartData>>(Resource.Idle())
     val chartState: StateFlow<Resource<ChartData>> = _chartState
 
+    private val _tempChartState = MutableStateFlow<Resource<ChartData>>(Resource.Idle())
+    val tempChartState: StateFlow<Resource<ChartData>> = _tempChartState
+
     private val _computedSummary = MutableStateFlow(ReportSummary())
     val computedSummary: StateFlow<ReportSummary> = _computedSummary.asStateFlow()
 
@@ -43,12 +46,38 @@ class ReportViewModel(
                     val rid = session.restaurantId
                     fetchDailyReport(rid)
                     fetchChartData(rid)
+                    fetchTempChartData(rid)
                 } else {
                     _reportState.value = Resource.Idle()
                     _chartState.value = Resource.Idle()
+                    _tempChartState.value = Resource.Idle()
                     _computedSummary.value = ReportSummary()
                 }
             }
+        }
+    }
+
+    fun fetchTempChartData(restaurantId: String? = null) {
+        val rid = restaurantId ?: authRepository.userSession.value?.restaurantId ?: return
+        viewModelScope.launch {
+            _tempChartState.value = Resource.Loading()
+            val result = chartRepository.getTemperatureHistory(rid)
+            result.onSuccess { data ->
+                _tempChartState.value = Resource.Success(data)
+                updateSummaryWithTemp(data)
+            }.onFailure {
+                _tempChartState.value = Resource.Error(it.message ?: "Failed to load temp chart")
+            }
+        }
+    }
+
+    private fun updateSummaryWithTemp(data: ChartData) {
+        val avgTemp = data.points.map { it.y }.average()
+        if (!avgTemp.isNaN()) {
+            val currentSummary = _computedSummary.value
+            _computedSummary.value = currentSummary.copy(
+                avgTemp = String.format(java.util.Locale.getDefault(), "%.1f°C", avgTemp)
+            )
         }
     }
 

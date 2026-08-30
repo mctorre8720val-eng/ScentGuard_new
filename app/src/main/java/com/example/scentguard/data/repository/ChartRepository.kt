@@ -14,6 +14,20 @@ class ChartRepository(
     private val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     suspend fun getGasLevelHistory(restaurantId: String): Result<ChartData> {
+        return getSensorHistory(restaurantId, "currentGasPpm", 0f, 2000f, "ppm")
+    }
+
+    suspend fun getTemperatureHistory(restaurantId: String): Result<ChartData> {
+        return getSensorHistory(restaurantId, "temperature", 0f, 100f, "°C")
+    }
+
+    private suspend fun getSensorHistory(
+        restaurantId: String,
+        fieldName: String,
+        minVal: Float,
+        maxVal: Float,
+        unit: String
+    ): Result<ChartData> {
         if (restaurantId.isBlank()) return Result.failure(Exception("Invalid ID"))
         
         return try {
@@ -25,20 +39,19 @@ class ChartRepository(
                 .get()
                 .await()
                 
-            // Reversing the list to show data points from oldest to newest on the X-axis
             val points = snapshot.documents.reversed().mapIndexed { index, doc ->
-                val gas = (doc.get("currentGasPpm") as? Number)?.toFloat() ?: 0f
+                val value = (doc.get(fieldName) as? Number)?.toFloat() ?: 0f
                 val timestamp = doc.getTimestamp("timestamp")?.toDate() ?: Date()
                 val label = timeFormatter.format(timestamp)
-                ChartPoint(index.toFloat(), gas, label)
+                ChartPoint(index.toFloat(), value, label)
             }
             
             Result.success(
                 ChartData(
                     points = points,
-                    minVal = 0f,
-                    maxVal = 2000f,
-                    unit = "ppm"
+                    minVal = minVal,
+                    maxVal = maxVal,
+                    unit = unit
                 )
             )
         } catch (e: Exception) {

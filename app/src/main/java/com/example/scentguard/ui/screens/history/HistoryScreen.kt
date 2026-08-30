@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.HistoryItem
@@ -44,15 +45,11 @@ fun HistoryScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    if (user != null && user.role.uppercase() != "MANAGER") {
-        LaunchedEffect(Unit) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(Screen.Dashboard.route) { inclusive = true }
-            }
-        }
-    }
-
     val historyState by viewModel.historyState.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val selectedDateRange by viewModel.selectedDateRange.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -116,7 +113,7 @@ fun HistoryScreen(
                         onValueChange = { searchQuery = it },
                         modifier = Modifier
                             .responsiveContainer(maxWidth = 480.dp)
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
                         placeholder = { Text("Search logs...") },
                         leadingIcon = { Icon(Icons.Outlined.Search, null, tint = MaterialTheme.colorScheme.primary) },
                         shape = RoundedCornerShape(20.dp),
@@ -126,6 +123,50 @@ fun HistoryScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                         )
                     )
+
+                    // Category Filters
+                    ScrollableTabRow(
+                        selectedTabIndex = listOf("All", "Alerts", "Devices", "Fan", "Users", "System").indexOf(selectedCategory),
+                        containerColor = Color.Transparent,
+                        edgePadding = 24.dp,
+                        divider = {},
+                        indicator = {}
+                    ) {
+                        listOf("All", "Alerts", "Devices", "Fan", "Users", "System").forEach { category ->
+                            FilterChip(
+                                selected = selectedCategory == category,
+                                onClick = { viewModel.setCategory(category) },
+                                label = { Text(category) },
+                                modifier = Modifier.padding(end = 8.dp),
+                                shape = CircleShape,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    }
+
+                    // Date Filters
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 24.dp, vertical = 8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("All", "Today", "Last 7 Days", "Last 30 Days").forEach { range ->
+                            FilterChip(
+                                selected = selectedDateRange == range,
+                                onClick = { viewModel.setDateRange(range) },
+                                label = { Text(range, fontSize = 12.sp) },
+                                shape = CircleShape,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (val state = historyState) {
@@ -137,7 +178,11 @@ fun HistoryScreen(
                                     it.title.contains(searchQuery, ignoreCase = true) || 
                                     it.description.contains(searchQuery, ignoreCase = true) 
                                 } ?: emptyList()
-                                HistoryList(filteredItems)
+                                HistoryList(
+                                    items = filteredItems, 
+                                    isLoadingMore = isLoadingMore,
+                                    onLoadMore = { viewModel.loadNextPage() }
+                                )
                             }
                             is Resource.Error -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -171,7 +216,11 @@ fun HistoryScreen(
 }
 
 @Composable
-fun HistoryList(items: List<HistoryItem>) {
+fun HistoryList(
+    items: List<HistoryItem>,
+    isLoadingMore: Boolean,
+    onLoadMore: () -> Unit
+) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -206,6 +255,23 @@ fun HistoryList(items: List<HistoryItem>) {
             items(items) { item ->
                 HistoryCard(item)
             }
+            
+            item {
+                if (isLoadingMore) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                } else {
+                    TextButton(
+                        onClick = onLoadMore,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Load More", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            
             item {
                 Spacer(modifier = Modifier.height(100.dp))
             }

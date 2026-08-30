@@ -152,20 +152,18 @@ fun ScentGuardNavigationDrawer(
                     onClick = { onNavigate(Screen.History.route) }
                 )
                 
-                if (user?.role?.uppercase() == "MANAGER") {
-                    DrawerItem(
-                        label = "Staff",
-                        icon = Icons.Outlined.People,
-                        selected = currentRoute == "staff",
-                        onClick = { onNavigate("staff") }
-                    )
-                    DrawerItem(
-                        label = "Reports",
-                        icon = Icons.Outlined.Assessment,
-                        selected = currentRoute == Screen.Reports.route,
-                        onClick = { onNavigate(Screen.Reports.route) }
-                    )
-                }
+                DrawerItem(
+                    label = "Staff",
+                    icon = Icons.Outlined.People,
+                    selected = currentRoute == "staff",
+                    onClick = { onNavigate("staff") }
+                )
+                DrawerItem(
+                    label = "Reports",
+                    icon = Icons.Outlined.Assessment,
+                    selected = currentRoute == Screen.Reports.route,
+                    onClick = { onNavigate(Screen.Reports.route) }
+                )
 
                 Spacer(Modifier.weight(1f))
                 

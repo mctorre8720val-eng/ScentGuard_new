@@ -76,13 +76,18 @@ class StaffViewModel(
         }
     }
 
-    fun fetchRestaurantInfo(restaurantId: String) {
+    fun fetchRestaurantInfo(restaurantId: String, userRole: String? = null) {
         viewModelScope.launch {
             _restaurantInfo.value = Resource.Loading()
             val result = userRepository.getRestaurantById(restaurantId)
             result.onSuccess { restaurant ->
                 if (restaurant != null) {
-                    _restaurantInfo.value = Resource.Success(restaurant)
+                    val finalRestaurant = if (userRole?.uppercase() != "MANAGER") {
+                        restaurant.copy(inviteCode = "******")
+                    } else {
+                        restaurant
+                    }
+                    _restaurantInfo.value = Resource.Success(finalRestaurant)
                     updateCountdown()
                 } else {
                     _restaurantInfo.value = Resource.Error("Restaurant not found")
