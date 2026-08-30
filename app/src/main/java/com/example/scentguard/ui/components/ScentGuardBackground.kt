@@ -17,7 +17,7 @@ import com.example.scentguard.R
 @Composable
 fun ScentGuardBackground(
     modifier: Modifier = Modifier,
-    showBloom: Boolean = false,
+    showBloom: Boolean = true, // Default to true for premium feel
     content: @Composable () -> Unit
 ) {
     Surface(
@@ -31,7 +31,8 @@ fun ScentGuardBackground(
                         painter = painterResource(id = R.drawable.bg_fresh_tech_bloom),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.4f // Subtle bloom
                     )
                 }
                 content()

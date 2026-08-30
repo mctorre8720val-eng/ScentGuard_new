@@ -10,9 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -23,6 +25,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.R
@@ -132,51 +135,66 @@ fun SignUpScreen(
                     
                     Text(
                         text = if (isCompleteProfileMode) "Finalize profile" else "Register",
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.displayMedium,
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp
                     )
                     
                     Text(
                         text = if (isCompleteProfileMode) "Finish setting up your workspace" else "Join the ScentGuard network",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                        modifier = Modifier.padding(top = 12.dp, bottom = 24.dp)
                     )
 
                     TabRow(
                         selectedTabIndex = selectedTab,
                         containerColor = Color.Transparent,
                         divider = {},
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        indicator = { tabPositions ->
+                            if (selectedTab < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]).clip(CircleShape),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     ) {
                         Tab(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 },
-                            text = { Text("Manager") }
+                            text = { Text("Manager", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
+                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                         Tab(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
-                            text = { Text("Staff") }
+                            text = { Text("Staff", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
+                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = 24.dp,
+                        contentPadding = 28.dp,
                         maxWidth = 440.dp
                     ) {
                         OutlinedTextField(
                             value = fullName,
                             onValueChange = { fullName = it },
-                            label = { Text("Full name") },
+                            label = { Text("Full Name") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
                             )
                         )
                         
@@ -186,14 +204,16 @@ fun SignUpScreen(
                             value = restaurantInput,
                             onValueChange = { restaurantInput = it },
                             label = { 
-                                Text(if (selectedTab == 0) "Restaurant name" else "Invitation code") 
+                                Text(if (selectedTab == 0) "Restaurant Name" else "Invitation Code") 
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
                             ),
                             placeholder = {
                                 if (selectedTab == 1) Text("Enter 6-digit code")
@@ -205,7 +225,7 @@ fun SignUpScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email") },
+                            label = { Text("Email Address") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             singleLine = true,
@@ -216,7 +236,9 @@ fun SignUpScreen(
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
                             )
                         )
                         
@@ -228,7 +250,7 @@ fun SignUpScreen(
                                 },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
-                                Text("Not you? Sign out", style = MaterialTheme.typography.labelSmall)
+                                Text("Not you? Sign out", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                         
@@ -242,7 +264,7 @@ fun SignUpScreen(
                                 trailingIcon = {
                                     val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                        Icon(imageVector = image, contentDescription = null)
+                                        Icon(imageVector = image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -250,7 +272,9 @@ fun SignUpScreen(
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent
                                 )
                             )
                             
@@ -258,14 +282,16 @@ fun SignUpScreen(
                             OutlinedTextField(
                                 value = confirmPassword,
                                 onValueChange = { confirmPassword = it },
-                                label = { Text("Confirm password") },
+                                label = { Text("Confirm Password") },
                                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent
                                 )
                             )
                         }
@@ -275,21 +301,23 @@ fun SignUpScreen(
                         if (registrationState is Resource.Loading) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                                 LinearProgressIndicator(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
                                     color = MaterialTheme.colorScheme.primary,
                                     trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                 )
                                 Text(
                                     text = statusMessage,
                                     style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(top = 8.dp)
+                                    modifier = Modifier.padding(top = 8.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         ScentGuardButton(
-                            text = if (isCompleteProfileMode) "Finalize Setup" else if (selectedTab == 0) "Create Restaurant" else "Join Restaurant",
+                            text = if (isCompleteProfileMode) "Finalize Setup" else if (selectedTab == 0) "Create Account" else "Join Restaurant",
                             onClick = { 
                                 val role = if (selectedTab == 0) "Manager" else "Staff"
                                 viewModel.register(fullName, restaurantInput, email, role, password, confirmPassword) 

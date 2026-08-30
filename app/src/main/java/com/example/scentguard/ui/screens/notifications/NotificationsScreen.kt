@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.NotificationItem
 import com.example.scentguard.data.model.NotificationType
 import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.ui.theme.WarningOrange
@@ -183,12 +184,9 @@ fun NotificationCard(item: NotificationItem) {
         NotificationType.SYSTEM -> Icons.Outlined.SettingsSuggest
     }
 
-    Surface(
+    ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f)),
-        shadowElevation = if (item.isRead) 1.dp else 4.dp
+        contentPadding = 0.dp // Row handles padding
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -197,7 +195,7 @@ fun NotificationCard(item: NotificationItem) {
             Surface(
                 modifier = Modifier.size(44.dp),
                 color = color.copy(alpha = 0.05f),
-                shape = CircleShape
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
@@ -208,18 +206,28 @@ fun NotificationCard(item: NotificationItem) {
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = item.title, 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        color = if (item.isRead) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                    )
                     if (!item.isRead) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
                     }
                 }
-                Text(text = item.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = item.message, 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (item.isRead) 0.5f else 1f)
+                )
                 Text(
                     text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(item.timestamp.toDate()),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 6.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(top = 8.dp),
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

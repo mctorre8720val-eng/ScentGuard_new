@@ -134,27 +134,28 @@ fun LoginScreen(
                     
                     Text(
                         text = "Sign in",
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.displayMedium, // Larger, more premium
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp
                     )
                     
                     Text(
                         text = "Access your restaurant dashboard",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
+                        modifier = Modifier.padding(top = 12.dp, bottom = 48.dp)
                     )
 
                     ScentGuardCard(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = 24.dp,
+                        contentPadding = 28.dp, // More breathing room
                         maxWidth = 420.dp
                     ) {
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email") },
+                            label = { Text("Email Address") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             singleLine = true,
@@ -165,12 +166,12 @@ fun LoginScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                                focusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
                             )
                         )
                         
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         
                         OutlinedTextField(
                             value = password,
@@ -180,7 +181,7 @@ fun LoginScreen(
                             trailingIcon = {
                                 val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                    Icon(imageVector = image, contentDescription = null)
+                                    Icon(imageVector = image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -189,8 +190,8 @@ fun LoginScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                                focusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
                             )
                         )
                         
@@ -210,21 +211,21 @@ fun LoginScreen(
                         val isAnyLoading = loginState is Resource.Loading || (loginState is Resource.Success && userProfile is Resource.Loading)
                         
                         ScentGuardButton(
-                            text = "Continue",
+                            text = "Sign in",
                             onClick = { viewModel.login(email, password) },
                             isLoading = isAnyLoading,
                             maxWidth = 420.dp
                         )
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
-                            Text(" or ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(" or ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                             HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
                         GoogleButton(
                             onClick = {
@@ -267,7 +268,7 @@ fun LoginScreen(
                             },
                             isLoading = loginState is Resource.Loading,
                             enabled = !isAnyLoading,
-                            modifier = Modifier.fillMaxWidth() // responsiveContainer is inside
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 

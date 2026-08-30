@@ -25,6 +25,8 @@ import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.ui.components.ScentGuardMascotAvatar
+import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.utils.shimmerEffect
@@ -386,12 +388,20 @@ fun StaffCard(member: UserProfile, onRemove: (UserProfile) -> Unit) {
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        member.fullName.take(1).uppercase(),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    val mascot = MascotAvatars.getById(member.avatarId)
+                    if (member.avatarType == "mascot" && mascot != null) {
+                        ScentGuardMascotAvatar(
+                            mascot = mascot,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            member.fullName.take(1).uppercase(),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(16.dp))

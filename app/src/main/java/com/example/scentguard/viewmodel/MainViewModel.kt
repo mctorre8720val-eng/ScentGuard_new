@@ -29,9 +29,6 @@ class MainViewModel(
     private val _userProfile = MutableStateFlow<Resource<UserProfile>>(Resource.Idle())
     val userProfile: StateFlow<Resource<UserProfile>> = _userProfile
 
-    private val _imageUploadState = MutableStateFlow<Resource<String>>(Resource.Idle())
-    val imageUploadState: StateFlow<Resource<String>> = _imageUploadState
-
     private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
     val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted
 
@@ -135,16 +132,12 @@ class MainViewModel(
         }
     }
 
-    fun uploadProfileImage(uri: android.net.Uri) {
+    fun selectMascotAvatar(avatarId: String) {
         val uid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
-            _imageUploadState.value = Resource.Loading()
-            val result = userRepository.uploadProfileImage(uid, uri)
-            result.onSuccess {
-                _imageUploadState.value = Resource.Success(it)
-                fetchUserProfile() // Refresh UI
-            }.onFailure {
-                _imageUploadState.value = Resource.Error(it.message ?: "Upload failed")
+            val result = userRepository.updateAvatar(uid, "mascot", avatarId)
+            if (result.isSuccess) {
+                fetchUserProfile()
             }
         }
     }

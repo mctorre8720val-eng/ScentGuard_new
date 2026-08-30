@@ -1,8 +1,6 @@
 package com.example.scentguard.ui.screens.profile
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,25 +11,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
 import com.example.scentguard.data.model.UserProfile
 import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.AvatarPickerSheet
+import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.ui.components.ScentGuardMascotAvatar
+import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.utils.responsiveContainer
 import com.example.scentguard.viewmodel.MainViewModel
@@ -46,19 +45,28 @@ fun ProfileScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     
-    val uploadState by mainViewModel.imageUploadState.collectAsState()
-    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            if (uri != null) {
-                mainViewModel.uploadProfileImage(uri)
+    var showAvatarPicker by remember { mutableStateOf(false) }
+
+    if (showAvatarPicker) {
+        AvatarPickerSheet(
+            onDismiss = { showAvatarPicker = false },
+            selectedAvatarId = user?.avatarId,
+            onAvatarSelected = { avatarId ->
+                mainViewModel.selectMascotAvatar(avatarId)
+                val mascotName = MascotAvatars.getById(avatarId)?.name ?: "Guardian"
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "✓ Guardian changed to $mascotName",
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
-        }
-    )
+        )
+    }
 
     ScentGuardNavigationDrawer(
         user = user,
@@ -82,6 +90,7 @@ fun ProfileScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
@@ -116,22 +125,10 @@ fun ProfileScreen(
                     
                     ProfileHeader(
                         user = user,
-                        isUploading = uploadState is Resource.Loading,
-                        onEditImage = {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
+                        onEditAvatar = {
+                            showAvatarPicker = true
                         }
                     )
-                    
-                    if (uploadState is Resource.Error) {
-                        Text(
-                            text = uploadState.message ?: "Upload failed",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
                     
                     Spacer(modifier = Modifier.height(48.dp))
                     
@@ -203,8 +200,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileHeader(
     user: UserProfile?,
-    isUploading: Boolean,
-    onEditImage: () -> Unit
+    onEditAvatar: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -220,12 +216,12 @@ fun ProfileHeader(
                 border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    if (user?.profileImageUrl != null) {
-                        AsyncImage(
-                            model = user.profileImageUrl,
-                            contentDescription = "Profile Picture",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                    val mascot = MascotAvatars.getById(user?.avatarId)
+                    
+                    if (user?.avatarType == "mascot" && mascot != null) {
+                        ScentGuardMascotAvatar(
+                            mascot = mascot,
+                            modifier = Modifier.fillMaxSize()
                         )
                     } else {
                         Text(
@@ -235,28 +231,17 @@ fun ProfileHeader(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    
-                    if (isUploading) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = Color.Black.copy(alpha = 0.4f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
-                            }
-                        }
-                    }
                 }
             }
             
             SmallFloatingActionButton(
-                onClick = onEditImage,
+                onClick = onEditAvatar,
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 modifier = Modifier.padding(4.dp)
             ) {
-                Icon(Icons.Outlined.CameraAlt, contentDescription = "Change Picture", modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.Face, contentDescription = "Change Avatar", modifier = Modifier.size(20.dp))
             }
         }
         
@@ -290,11 +275,9 @@ fun SectionTitle(title: String) {
 
 @Composable
 fun ProfileInfoCard(items: List<Any>) {
-    Surface(
+    ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
+        contentPadding = 8.dp // Inner padding handled by rows
     ) {
         Column {
             items.forEachIndexed { index, item ->
@@ -306,7 +289,7 @@ fun ProfileInfoCard(items: List<Any>) {
                 if (index < items.size - 1) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 24.dp),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)
                     )
                 }
             }
@@ -319,13 +302,14 @@ private fun ProfileInfoRow(label: String, value: String, icon: ImageVector, isCl
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .let { if (isClickable) it.clickable { } else it }
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             modifier = Modifier.size(44.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-            shape = CircleShape
+            shape = RoundedCornerShape(12.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -333,8 +317,18 @@ private fun ProfileInfoRow(label: String, value: String, icon: ImageVector, isCl
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.labelMedium, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = value, 
+                style = MaterialTheme.typography.bodyLarge, 
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
         if (isClickable) {
             Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.navigation.Screen
+import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
@@ -214,14 +215,11 @@ fun SettingsScreen(
 
 @Composable
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
+    ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
-    ) {
-        Column(content = content)
-    }
+        contentPadding = 8.dp, // Individual items handle padding
+        content = content
+    )
 }
 
 @Composable
@@ -229,8 +227,9 @@ fun SectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 12.dp)
+        fontWeight = FontWeight.Black,
+        modifier = Modifier.padding(bottom = 16.dp, top = 8.dp),
+        letterSpacing = (-0.5).sp
     )
 }
 
@@ -364,13 +363,13 @@ fun ToggleItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             modifier = Modifier.size(44.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-            shape = CircleShape
+            shape = RoundedCornerShape(12.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -378,8 +377,18 @@ fun ToggleItem(
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.bodyLarge, 
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description, 
+                style = MaterialTheme.typography.labelSmall, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Medium
+            )
         }
         Switch(
             checked = checked, 
@@ -388,7 +397,7 @@ fun ToggleItem(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                 uncheckedBorderColor = Color.Transparent
             )
         )
@@ -407,13 +416,13 @@ fun ActionItem(
         color = Color.Transparent
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 modifier = Modifier.size(44.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                shape = CircleShape
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -421,8 +430,18 @@ fun ActionItem(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = label, 
+                    style = MaterialTheme.typography.bodyLarge, 
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = description, 
+                    style = MaterialTheme.typography.labelSmall, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Medium
+                )
             }
             Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
         }

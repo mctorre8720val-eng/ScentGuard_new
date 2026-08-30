@@ -2,6 +2,7 @@ package com.example.scentguard.ui.screens.dashboard
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,16 +19,18 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
 import com.example.scentguard.data.model.UserProfile
+import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFanControl
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
+import com.example.scentguard.ui.components.ScentGuardMascotAvatar
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -216,7 +219,7 @@ fun DashboardHeader(user: UserProfile?) {
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -228,8 +231,8 @@ fun DashboardHeader(user: UserProfile?) {
             )
             Text(
                 text = user?.fullName ?: "Guest User",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge, // Slightly larger
+                fontWeight = FontWeight.Black,
                 letterSpacing = (-1).sp
             )
             
@@ -238,13 +241,13 @@ fun DashboardHeader(user: UserProfile?) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                    shape = CircleShape
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = user?.role ?: "Staff",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -253,30 +256,31 @@ fun DashboardHeader(user: UserProfile?) {
                 Text(
                     text = user?.restaurantName ?: "ScentGuard Station",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
         
         Surface(
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(72.dp), // Slightly larger
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-            border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (user?.profileImageUrl != null) {
-                    AsyncImage(
-                        model = user.profileImageUrl,
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                val mascot = MascotAvatars.getById(user?.avatarId)
+                
+                if (user?.avatarType == "mascot" && mascot != null) {
+                    ScentGuardMascotAvatar(
+                        mascot = mascot,
+                        modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Text(
                         text = user?.fullName?.take(1)?.uppercase() ?: "G",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -296,16 +300,16 @@ fun AirQualityHero(
         initialValue = 1f,
         targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutSine),
+            animation = tween(2500, easing = EaseInOutSine), // Slower breathing
             repeatMode = RepeatMode.Reverse
         ),
         label = "scale"
     )
     val auraAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.3f,
+        initialValue = 0.05f,
+        targetValue = 0.2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutSine),
+            animation = tween(2500, easing = EaseInOutSine),
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
@@ -333,32 +337,32 @@ fun AirQualityHero(
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Column(
-            modifier = Modifier.padding(28.dp),
+            modifier = Modifier.padding(vertical = 40.dp, horizontal = 28.dp), // Taller card
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 "Current Air Quality",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             
             Box(contentAlignment = Alignment.Center) {
                 // Breathing Aura
                 Box(
                     modifier = Modifier
-                        .size(140.dp)
+                        .size(160.dp)
                         .scale(auraScale)
                         .background(statusColor.copy(alpha = auraAlpha), CircleShape)
                 )
 
                 CircularProgressIndicator(
-                    progress = { (gasLevel / 1000f).coerceIn(0f, 1f) },
-                    modifier = Modifier.size(180.dp),
+                    progress = { (gasLevel / 2000f).coerceIn(0f, 1f) }, // Scale to 2000ppm
+                    modifier = Modifier.size(200.dp),
                     color = statusColor,
-                    strokeWidth = 10.dp,
+                    strokeWidth = 12.dp,
                     trackColor = statusColor.copy(alpha = 0.05f),
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
@@ -367,35 +371,44 @@ fun AirQualityHero(
                     Text(
                         text = statusText,
                         style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = statusColor
+                        fontWeight = FontWeight.Black,
+                        color = statusColor,
+                        letterSpacing = (-2).sp
                     )
                     Text(
                         text = "$gasLevel ppm",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = statusColor.copy(alpha = 0.05f),
+                shape = CircleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.1f))
             ) {
-                Icon(
-                    if (gasLevel == 0) Icons.Outlined.PowerSettingsNew else if (airStatus.uppercase() != "DANGER") Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
-                    null, 
-                    tint = statusColor, 
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (gasLevel == 0) "Awaiting sensor data..." else if (airStatus.uppercase() != "DANGER") "Optimized ventilation" else "Ventilation recommended",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (gasLevel == 0) Icons.Outlined.PowerSettingsNew else if (airStatus.uppercase() != "DANGER") Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                        null, 
+                        tint = statusColor, 
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (gasLevel == 0) "Awaiting sensor data" else if (airStatus.uppercase() != "DANGER") "Optimized ventilation" else "Immediate action required",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                }
             }
         }
     }
@@ -408,12 +421,12 @@ fun MetricsGrid(
     temp: Float,
     isOnline: Boolean
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(
             "Hardware Status",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -433,10 +446,10 @@ fun MetricsGrid(
             )
             if (isWideScreen) {
                 MetricCard(
-                    label = "System Status",
-                    value = if (!isOnline) "OFFLINE" else "OK",
+                    label = "Sync Status",
+                    value = if (!isOnline) "LOST" else "LIVE",
                     unit = "",
-                    icon = Icons.Outlined.Sensors,
+                    icon = Icons.Outlined.WifiTethering,
                     modifier = Modifier.weight(1f),
                     valueColor = if (!isOnline) MaterialTheme.colorScheme.error else Color(0xFF34C759)
                 )
@@ -446,16 +459,23 @@ fun MetricsGrid(
         if (!isWideScreen) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 MetricCard(
-                    label = "Sensor Unit",
+                    label = "Connection",
                     value = if (isOnline) "Online" else "Offline",
+                    unit = "",
+                    icon = Icons.Outlined.Router,
+                    modifier = Modifier.weight(1f),
+                    valueStyle = MaterialTheme.typography.headlineMedium,
+                    valueColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
+                )
+                // Device ID / Info
+                MetricCard(
+                    label = "Hardware",
+                    value = "V1",
                     unit = "",
                     icon = Icons.Outlined.Memory,
                     modifier = Modifier.weight(1f),
-                    valueStyle = MaterialTheme.typography.titleLarge,
-                    valueColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
+                    valueStyle = MaterialTheme.typography.headlineMedium
                 )
-                // Spacer card to keep grid balanced
-                Box(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -477,22 +497,39 @@ fun MetricCard(
         color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Surface(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                shape = CircleShape,
-                modifier = Modifier.size(44.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.labelLarge, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Bold
+            )
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, style = valueStyle, fontWeight = FontWeight.Bold, color = valueColor)
+                Text(
+                    text = value, 
+                    style = valueStyle, 
+                    fontWeight = FontWeight.Black, 
+                    color = valueColor,
+                    letterSpacing = (-1).sp
+                )
                 if (unit.isNotEmpty()) {
-                    Text(unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = unit, 
+                        style = MaterialTheme.typography.titleMedium, 
+                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp), 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

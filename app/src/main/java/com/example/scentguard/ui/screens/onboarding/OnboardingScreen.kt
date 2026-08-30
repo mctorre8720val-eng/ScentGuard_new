@@ -75,10 +75,12 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(0.45f),
+                    .fillMaxHeight(0.48f), // Slightly taller
                 color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
-                tonalElevation = 8.dp
+                shape = RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp), // More rounded
+                tonalElevation = 2.dp,
+                shadowElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
             ) {
                 Column(
                     modifier = Modifier
@@ -90,25 +92,26 @@ fun OnboardingScreen(
                     AnimatedContent(
                         targetState = pages[pagerState.currentPage],
                         transitionSpec = {
-                            fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                            fadeIn(tween(400)) togetherWith fadeOut(tween(400))
                         },
                         label = "content"
                     ) { page ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = page.title,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.displaySmall, // More impactful
+                                fontWeight = FontWeight.Black,
                                 textAlign = TextAlign.Center,
-                                letterSpacing = (-1).sp
+                                letterSpacing = (-1).sp,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
                             Text(
                                 text = page.description,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 textAlign = TextAlign.Center,
-                                lineHeight = 24.sp
+                                lineHeight = 26.sp
                             )
                         }
                     }
@@ -136,9 +139,14 @@ fun OnboardingScreen(
                                         navController.navigate(Screen.Dashboard.route) {
                                             popUpTo(Screen.Splash.route) { inclusive = true }
                                         }
-                                    }
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text("Skip", color = MaterialTheme.colorScheme.outline)
+                                    Text(
+                                        "Skip", 
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Button(
@@ -148,9 +156,10 @@ fun OnboardingScreen(
                                         }
                                     },
                                     shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier.height(56.dp).width(100.dp)
+                                    modifier = Modifier.height(56.dp).width(110.dp),
+                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp)
                                 ) {
-                                    Text("Next")
+                                    Text("Next", fontWeight = FontWeight.Bold)
                                 }
                             } else {
                                 ScentGuardButton(
@@ -161,7 +170,7 @@ fun OnboardingScreen(
                                             popUpTo(Screen.Splash.route) { inclusive = true }
                                         }
                                     },
-                                    modifier = Modifier.width(160.dp)
+                                    modifier = Modifier.width(180.dp)
                                 )
                             }
                         }

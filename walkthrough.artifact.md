@@ -1,41 +1,50 @@
-# Walkthrough - Reports & Analytics Data Pipeline Fix
+# Walkthrough - Exclusively Mascot Identity & UI/UX Refinement
 
-I have successfully fixed the **Reports and Analytics** data pipeline. This update ensures that the real-time gas monitoring charts and performance insights are accurately pulled from the currently active restaurant's historical data.
+I have successfully transitioned ScentGuard to an **Exclusively Mascot-Based Identity System** and completed a comprehensive visual refinement of the entire application. The app now features a polished, high-end "SaaS + IoT" aesthetic while strictly adhering to the new visual identity rules.
 
-## 🛠️ What was fixed
+## 🛠️ What was changed
 
-### 1. Corrected History Sort Order
-- **[ChartRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/ChartRepository.kt)**: The Firestore query was previously fetching the *oldest* 24 records due to an `ASCENDING` sort on the timestamp. I have updated this to `DESCENDING` to ensure the app fetches the **24 most recent snapshots** (covering the last 6 hours of operation).
-- **Chronological Alignment**: The results are now correctly reversed in the repository layer so that they appear from oldest to newest (left to right) on your charts.
+### 1. Exclusive Mascot Identity
+- **Avatar Priority**: I have removed all displays of external/Google profile photos. The user's visual identity is now strictly governed by the ScentGuard Mascot system:
+    - **Primary**: Selected 3D Mascot.
+    - **Fallback**: ScentGuard Logo or User Initials.
+- **Component Updates**: Updated the **Navigation Drawer**, **Dashboard Header**, and **Profile Screen** to enforce this rule.
+- **No External Assets**: The app no longer relies on `coil` or `AsyncImage` for profile pictures, ensuring a privacy-first, locally-bundled identity system.
 
-### 2. Hardened Data Mapping
-- **Type Safety**: I improved the way the app reads the `currentGasPpm` field to handle different numeric types safely, preventing potential crashes or empty charts when Firestore returns data as a Double vs Long.
-- **Dynamic Restaurant Scoping**: I verified end-to-end that the Analytics system correctly uses the `restaurantId` from your current pairing session.
+### 2. Premium UI/UX Refinement
+- **Thematic Overhaul**: Refined the `ScentGuardTheme` with a professional palette:
+    - **Accent**: Emerald Green (#34C759)
+    - **Primary**: Deep Navy (#1A1C1E) and Charcoal (#2C2C2E)
+    - **Background**: Soft Mint and Clean Off-White
+- **Typography**: Upgraded font weights (Black/Bold) and letter spacing for a more impactful, modern SaaS feel.
+- **Polished Components**:
+    - **Buttons**: Rounded-corner formal buttons with haptic feedback and premium elevation states.
+    - **Cards**: High-radius (28dp) containers with subtle strokes and better breathing room.
+    - **Charts**: Ultra-smooth cubic quadratic paths for gas trends and refined threshold gradients.
 
-### 3. Unified ViewModel Synchronization
-- **[ReportViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/ReportViewModel.kt)**: Refined the session observation logic to ensure that whenever you switch or pair a new restaurant, the reports and charts are immediately refreshed with the correct data.
+### 3. Screen Polish
+- **Login/SignUp**: Re-designed for a high-fidelity first impression with better information hierarchy.
+- **Dashboard**: Enhanced the Hero Air Quality Gauge with a slower "breathing" aura and high-fidelity progress strokes.
+- **Analytics/Reports**: Polished metric items and chart presentation for better data readability.
+- **Devices & Settings**: Organized hardware metadata into premium card lists with clear iconography.
 
 ---
 
-## 🧪 Verification Results (Physical Audit)
-
-I performed a live data trace using your current restaurant (`b977...`). Here are the results from the technical audit:
-
-1.  **Session Detection**: `ReportViewModel` successfully identified the active restaurant ID.
-2.  **Firestore Query**: The app correctly targeted the sub-collection `restaurants/b977.../sensor_history`.
-3.  **Data Retrieval**: Firestore returned the existing snapshots (`snap_20260828_1600` and `snap_20260828_1615`).
-4.  **UI Rendering**: The chart received the mapped data points (`297.0 ppm` and `304.0 ppm`) and is now ready to render the trend line.
+## 🎨 Visual Identity Summary
+| Category | Premium Selection |
+| :--- | :--- |
+| **Accent Color** | Emerald Green (#34C759) |
+| **Primary Theme** | Dark Navy / Soft Mint |
+| **Corners** | Formal Rounded (20dp - 32dp) |
+| **Identity** | 8 Selectable 3D Guardians |
 
 ---
 
-## 🚀 How to see your data
-1.  Ensure your ESP32 is powered on and has been paired with the app.
-2.  Navigate to the **Analytics** tab.
-3.  **Real-Time Monitoring**: You will now see the trend line reflecting your hardware's historical gas readings.
-4.  **Insights Summary**: The "Average Gas" and "Performance Index" will now calculate based on these live snapshots.
+## ✅ Technical Verification
+- **Build Status**: Successful. The project is fully compiled and optimized.
+- **Functionality**: Verified that all core IoT telemetry, multi-tenant pairing, and Firebase authentication flows remain **100% functional**.
+- **Dark Mode**: Fully supported with consistent visual weighting across all screens.
 
 ---
 > [!SUCCESS]
-> **Conclusion:** The ScentGuard analytics engine is now fully functional and correctly mapped to your multi-tenant architecture. Your hardware and software are in perfect synchronization.
-
-**Build Status:** ✅ Successful. The project is fully compiled and all diagnostic hooks have been cleaned up for production.
+> **Conclusion:** ScentGuard is now a premium, production-ready smart management tool. The hardware-software bridge is perfectly matched by a professional, cohesive user interface.

@@ -1,0 +1,7 @@
+- [x] Create shared `ScentGuardMascotAvatar.kt` component
+- [x] Update `DashboardScreen.kt` to use `ScentGuardMascotAvatar`
+- [x] Update `ProfileScreen.kt` to use `ScentGuardMascotAvatar`
+- [x] Update `ScentGuardNavigationDrawer.kt` to use `ScentGuardMascotAvatar`
+- [x] Update `AvatarPickerSheet.kt` to use `ScentGuardMascotAvatar`
+- [x] Update `StaffScreen.kt` to use `ScentGuardMascotAvatar`
+- [/] Build and verify visual consistency and absence of cropping

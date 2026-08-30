@@ -20,11 +20,13 @@ import com.example.scentguard.utils.responsiveContainer
 @Composable
 fun ScentGuardCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 32.dp,
+    cornerRadius: Dp = 28.dp, // Premium soft radius
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentPadding: Dp = 24.dp,
     onClick: (() -> Unit)? = null,
-    maxWidth: Dp = 480.dp, // Component-specific max width
+    maxWidth: Dp = 480.dp,
+    borderWidth: Dp = 0.5.dp,
+    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -44,11 +46,11 @@ fun ScentGuardCard(
                 defaultElevation = 0.dp
             ),
             border = androidx.compose.foundation.BorderStroke(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                width = borderWidth,
+                color = borderColor
             ),
             onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             }
         ) {
@@ -69,8 +71,8 @@ fun ScentGuardCard(
                 defaultElevation = 0.dp
             ),
             border = androidx.compose.foundation.BorderStroke(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                width = borderWidth,
+                color = borderColor
             )
         ) {
             Column(

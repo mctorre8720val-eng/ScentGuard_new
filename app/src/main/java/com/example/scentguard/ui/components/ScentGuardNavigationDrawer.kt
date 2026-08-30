@@ -17,9 +17,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.scentguard.R
 import com.example.scentguard.data.model.UserProfile
+import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.navigation.Screen
 
 @Composable
@@ -74,48 +74,58 @@ fun ScentGuardNavigationDrawer(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(20.dp)
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(24.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            modifier = Modifier.size(52.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
+                            modifier = Modifier.size(56.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            shape = CircleShape,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                if (user?.profileImageUrl != null) {
-                                    AsyncImage(
-                                        model = user.profileImageUrl,
-                                        contentDescription = "Profile Picture",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
+                                val mascot = MascotAvatars.getById(user?.avatarId)
+                                
+                                if (user?.avatarType == "mascot" && mascot != null) {
+                                    ScentGuardMascotAvatar(
+                                        mascot = mascot,
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                 } else {
                                     Text(
                                         text = user?.fullName?.take(1)?.uppercase() ?: "G",
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Black
                                     )
                                 }
                             }
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column {
                             Text(
                                 text = user?.fullName ?: "Guest User",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text(
-                                text = user?.email ?: "Sign in to sync",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Surface(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = user?.role ?: "STAFF",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }

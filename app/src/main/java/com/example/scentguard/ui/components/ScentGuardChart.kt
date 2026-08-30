@@ -106,29 +106,29 @@ fun ScentGuardChart(
                     fun getY(ppm: Float) = height - ((ppm - minVal) / scaleRange) * height
 
                     // 1. Draw Threshold Zones (Background)
-                    // SAFE Zone (Greenish)
+                    // SAFE Zone (Emerald tint)
                     drawRect(
-                        color = Color(0xFF34C759).copy(alpha = 0.05f),
+                        color = Color(0xFF34C759).copy(alpha = 0.03f),
                         topLeft = Offset(0f, getY(safeLimit)),
                         size = androidx.compose.ui.geometry.Size(width, height - getY(safeLimit))
                     )
-                    // WARN Zone (Orangish)
+                    // WARN Zone (Orange tint)
                     drawRect(
-                        color = Color(0xFFFF9500).copy(alpha = 0.05f),
+                        color = Color(0xFFFF9500).copy(alpha = 0.03f),
                         topLeft = Offset(0f, getY(dangerLimit)),
                         size = androidx.compose.ui.geometry.Size(width, getY(safeLimit) - getY(dangerLimit))
                     )
-                    // DANGER Zone (Reddish)
+                    // DANGER Zone (Red tint)
                     drawRect(
-                        color = Color(0xFFFF3B30).copy(alpha = 0.05f),
+                        color = Color(0xFFFF3B30).copy(alpha = 0.03f),
                         topLeft = Offset(0f, 0f),
                         size = androidx.compose.ui.geometry.Size(width, getY(dangerLimit))
                     )
 
                     // 2. Draw Grid Lines at Thresholds
-                    val gridAlpha = 0.1f
-                    drawLine(Color.Black.copy(alpha = gridAlpha), Offset(0f, getY(safeLimit)), Offset(width, getY(safeLimit)), strokeWidth = 1.dp.toPx())
-                    drawLine(Color.Black.copy(alpha = gridAlpha), Offset(0f, getY(dangerLimit)), Offset(width, getY(dangerLimit)), strokeWidth = 1.dp.toPx())
+                    val gridAlpha = 0.05f
+                    drawLine(Color.Gray.copy(alpha = gridAlpha), Offset(0f, getY(safeLimit)), Offset(width, getY(safeLimit)), strokeWidth = 1.dp.toPx())
+                    drawLine(Color.Gray.copy(alpha = gridAlpha), Offset(0f, getY(dangerLimit)), Offset(width, getY(dangerLimit)), strokeWidth = 1.dp.toPx())
 
                     val path = Path()
                     val fillPath = Path()
@@ -144,9 +144,12 @@ fun ScentGuardChart(
                         } else {
                             val prevX = (i - 1) * spacing
                             val prevY = getY(data.points[i - 1].y).coerceIn(0f, height)
-                            path.quadraticTo(prevX, prevY, (x + prevX) / 2, (y + prevY) / 2)
-                            path.lineTo(x, y)
-                            fillPath.lineTo(x, y)
+                            
+                            // Cubic curve for ultra-smooth line
+                            val cp1X = prevX + (x - prevX) / 2
+                            path.cubicTo(cp1X, prevY, cp1X, y, x, y)
+                            
+                            fillPath.cubicTo(cp1X, prevY, cp1X, y, x, y)
                         }
                         
                         if (i == data.points.size - 1) {
@@ -160,7 +163,7 @@ fun ScentGuardChart(
                         path = fillPath,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                lineColor.copy(alpha = 0.2f),
+                                lineColor.copy(alpha = 0.15f),
                                 Color.Transparent
                             )
                         )
@@ -170,7 +173,7 @@ fun ScentGuardChart(
                     drawPath(
                         path = path,
                         color = lineColor,
-                        style = Stroke(width = 3.dp.toPx())
+                        style = Stroke(width = 2.5.dp.toPx())
                     )
                     
                     // 5. Scrubbing Indicator

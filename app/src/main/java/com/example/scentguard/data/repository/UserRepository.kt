@@ -6,8 +6,6 @@ import com.example.scentguard.data.model.UserProfile
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,67 +16,14 @@ import java.util.concurrent.TimeUnit
 
 class UserRepository(
     private val authProvider: () -> FirebaseAuth = { FirebaseAuth.getInstance() },
-    private val firestoreProvider: () -> FirebaseFirestore = { FirebaseFirestore.getInstance() },
-    private val storageProvider: () -> FirebaseStorage = { FirebaseStorage.getInstance() }
+    private val firestoreProvider: () -> FirebaseFirestore = { FirebaseFirestore.getInstance() }
 ) {
     private val TAG = "UserRepository"
     private val TIMEOUT_MS = 7000L
 
     private val auth by lazy { try { authProvider() } catch (e: Exception) { null } }
     private val firestore by lazy { try { firestoreProvider() } catch (e: Exception) { null } }
-    private val storage by lazy { try { storageProvider() } catch (e: Exception) { null } }
 
-    /**
-     * Uploads a profile image to Firebase Storage and updates the user's profile URL.
-     * Includes detailed diagnostic logging to identify bucket, path, or permission issues.
-     */
-    suspend fun uploadProfileImage(uid: String, imageUri: android.net.Uri): Result<String> {
-        val storageInstance = storage ?: return Result.failure(Exception("Storage not initialized"))
-        val bucketName = storageInstance.reference.bucket
-        val storagePath = "profile_images/$uid.jpg"
-
-        return try {
-            Log.d(TAG, "DIAGNOSTIC: Starting upload")
-            Log.d(TAG, "DIAGNOSTIC: Bucket: $bucketName")
-            Log.d(TAG, "DIAGNOSTIC: Path: $storagePath")
-
-            val imageRef = storageInstance.reference.child(storagePath)
-            
-            // 1. Perform the upload
-            Log.d(TAG, "DIAGNOSTIC: Executing putFile...")
-            imageRef.putFile(imageUri).await()
-            Log.d(TAG, "DIAGNOSTIC: putFile completed successfully")
-            
-            // 2. Verify metadata existence
-            Log.d(TAG, "DIAGNOSTIC: Fetching metadata for verification...")
-            val metadata = imageRef.metadata.await()
-            Log.d(TAG, "DIAGNOSTIC: Metadata found. Size: ${metadata.sizeBytes} bytes")
-            
-            // 3. Get download URL
-            Log.d(TAG, "DIAGNOSTIC: Requesting download URL...")
-            val downloadUrl = imageRef.downloadUrl.await().toString()
-            Log.d(TAG, "DIAGNOSTIC: URL retrieved: $downloadUrl")
-            
-            // 4. Update Firestore
-            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
-            db.collection("users").document(uid).update("profileImageUrl", downloadUrl).await()
-            Log.d(TAG, "DIAGNOSTIC: Firestore updated with new image URL")
-            
-            Result.success(downloadUrl)
-        } catch (e: Exception) {
-            if (e is StorageException) {
-                Log.e(TAG, "DIAGNOSTIC: StorageException Caught")
-                Log.e(TAG, "DIAGNOSTIC: Error Code: ${e.errorCode}")
-                Log.e(TAG, "DIAGNOSTIC: HTTP Result Code: ${e.httpResultCode}")
-                Log.e(TAG, "DIAGNOSTIC: Message: ${e.message}")
-                Log.e(TAG, "DIAGNOSTIC: Bucket: $bucketName")
-                Log.e(TAG, "DIAGNOSTIC: Path: $storagePath")
-            } else {
-                Log.e(TAG, "DIAGNOSTIC: General Exception: ${e.message}", e)
-            }
-            Result.failure(e)
-        }
-    }
     fun getRestaurantFlow(restaurantId: String): Flow<Restaurant?> = callbackFlow {
         val db = firestore ?: run {
             close()
@@ -136,6 +81,24 @@ class UserRepository(
     }
 
     /**
+     * Updates the user's avatar selection.
+     */
+    suspend fun updateAvatar(uid: String, type: String, id: String?): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("users").document(uid).update(
+                mapOf(
+                    "avatarType" to type,
+                    "avatarId" to id
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Saves user profile to Firestore.
      * @param uid The UID from Firebase Auth.
      * @param user The user profile data.
@@ -153,6 +116,8 @@ class UserRepository(
                 "email" to user.email,
                 "role" to user.role,
                 "onboardingCompleted" to user.onboardingCompleted,
+                "avatarType" to user.avatarType,
+                "avatarId" to user.avatarId,
                 "createdAt" to (user.createdAt ?: Timestamp.now())
             )
             

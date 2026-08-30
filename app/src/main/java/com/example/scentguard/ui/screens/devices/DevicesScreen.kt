@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardChart
+import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFanControl
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
@@ -157,52 +158,102 @@ fun DevicesScreen(
 
 @Composable
 fun DeviceStatusCard() {
-    Surface(
+    ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     ) {
         Row(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 modifier = Modifier.size(56.dp),
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
-                shape = CircleShape
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Router, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(32.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.Router, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.primary, 
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Vent-01 (ESP32)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text("Status: Online", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                Text(
+                    text = "ScentGuard Base", 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.Black, 
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF34C759), CircleShape))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Hardware Live", 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Spacer(modifier = Modifier.weight(1f))
-            Box(modifier = Modifier.size(12.dp).background(Color(0xFF4CAF50), CircleShape)) // Green online dot
+            IconButton(onClick = { /* Info */ }) {
+                Icon(Icons.Outlined.Info, null, tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.4f))
+            }
         }
     }
 }
 
 @Composable
 fun DeviceInfoList() {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        DeviceInfoItem("Connection Type", "Wi-Fi (2.4GHz)", Icons.Outlined.Wifi)
-        DeviceInfoItem("IP Address", "192.168.1.42", Icons.Outlined.Dns)
-        DeviceInfoItem("Firmware", "v1.2.0-stable", Icons.Outlined.Build)
-        DeviceInfoItem("Uptime", "4d 12h 30m", Icons.Outlined.Timer)
+    ScentGuardCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = 8.dp
+    ) {
+        Column {
+            DeviceInfoItem("Connection Type", "Wi-Fi (2.4GHz)", Icons.Outlined.Wifi)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+            DeviceInfoItem("Network Status", "Secured", Icons.Outlined.VerifiedUser)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+            DeviceInfoItem("Firmware", "v1.2.0-stable", Icons.Outlined.Build)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+            DeviceInfoItem("Last Sync", "Just now", Icons.Outlined.Update)
+        }
     }
 }
 
 @Composable
 fun DeviceInfoItem(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically, 
+        modifier = Modifier.fillMaxWidth().padding(20.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(36.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            }
+        }
         Spacer(modifier = Modifier.width(16.dp))
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.bodyMedium, 
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value, 
+            style = MaterialTheme.typography.bodyMedium, 
+            fontWeight = FontWeight.Black, 
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
