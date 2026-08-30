@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.scentguard.data.model.AlertSound
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardCard
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
@@ -209,6 +210,85 @@ fun SettingsScreen(
                     }
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun AlertSoundSection(viewModel: SettingsViewModel) {
+    val selectedSoundId by viewModel.selectedAlarmSoundId.collectAsState()
+    val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
+    val selectedSound = AlertSound.getById(selectedSoundId)
+    
+    var showSoundDialog by remember { mutableStateOf(false) }
+
+    if (showSoundDialog) {
+        AlertDialog(
+            onDismissRequest = { showSoundDialog = false },
+            title = { Text("Critical Alert Sound", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    AlertSound.ALL_SOUNDS.forEach { sound ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    viewModel.setAlarmSound(sound.id)
+                                    showSoundDialog = false 
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = sound.id == selectedSoundId, onClick = null)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(text = sound.displayName)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showSoundDialog = false }) { Text("Cancel") }
+            },
+            shape = RoundedCornerShape(32.dp)
+        )
+    }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.MusicNote, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Critical Alert Sound", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(selectedSound.displayName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                }
+            }
+            
+            Row {
+                IconButton(onClick = { viewModel.togglePreview(selectedSoundId) }) {
+                    Icon(
+                        imageVector = if (isPreviewPlaying) Icons.Outlined.StopCircle else Icons.Outlined.PlayCircleOutline,
+                        contentDescription = "Preview",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { showSoundDialog = true }) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "Change Sound", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
     }
 }

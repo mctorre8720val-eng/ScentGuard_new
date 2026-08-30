@@ -15,6 +15,8 @@ data class Restaurant(
     val humidity: Float = 0f,
     val thresholdWarn: Int = 1000,
     val thresholdDanger: Int = 1500,
+    val tempThresholdWarn: Float = 40f,
+    val tempThresholdDanger: Float = 50f,
     val lastSeen: Timestamp? = null,
     val fanMode: String = "AUTO", // "ON", "OFF", "AUTO"
     val createdAt: Timestamp? = null

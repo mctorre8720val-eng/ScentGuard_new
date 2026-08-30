@@ -4,6 +4,7 @@ import android.app.Application
 import com.example.scentguard.data.local.PreferencesManager
 import com.example.scentguard.data.manager.SessionManager
 import com.example.scentguard.data.repository.*
+import com.example.scentguard.service.AlertAudioManager
 import com.google.firebase.FirebaseApp
 
 class ScentGuardApplication : Application() {
@@ -36,12 +37,16 @@ class ScentGuardApplication : Application() {
         
     lateinit var reportRepository: ReportRepository
         private set
+        
+    lateinit var alertAudioManager: AlertAudioManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         FirebaseApp.initializeApp(this)
         preferencesManager = PreferencesManager(this)
+        alertAudioManager = AlertAudioManager(this)
         sessionManager = SessionManager(preferencesManager)
         userRepository = UserRepository()
         authRepository = AuthRepository(sessionManager, userRepository)

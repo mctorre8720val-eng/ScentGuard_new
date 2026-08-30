@@ -27,7 +27,7 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
                 StaffViewModel(app.userRepository) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                SettingsViewModel(app) as T
+                SettingsViewModel(app, app.alertAudioManager) as T
             }
             modelClass.isAssignableFrom(HistoryViewModel::class.java) -> {
                 HistoryViewModel(app.historyRepository, app.authRepository) as T

@@ -4,14 +4,20 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scentguard.ScentGuardApplication
+import com.example.scentguard.data.model.AlertSound
+import com.example.scentguard.service.AlertAudioManager
 import com.example.scentguard.utils.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+class SettingsViewModel(
+    application: Application,
+    private val alertAudioManager: AlertAudioManager
+) : AndroidViewModel(application) {
     
     private val app = application as ScentGuardApplication
     private val preferencesManager = app.preferencesManager
@@ -19,6 +25,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _thresholdUpdateState = MutableStateFlow<Resource<Unit>>(Resource.Idle())
     val thresholdUpdateState: StateFlow<Resource<Unit>> = _thresholdUpdateState
+
+    private val _isPreviewPlaying = MutableStateFlow(false)
+    val isPreviewPlaying: StateFlow<Boolean> = _isPreviewPlaying.asStateFlow()
+
+    val selectedAlarmSoundId: StateFlow<String> = preferencesManager.selectedAlarmSoundId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "critical_alarm")
 
     val themeMode: StateFlow<String> = preferencesManager.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
@@ -44,6 +56,30 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun toggleFanAlerts(enabled: Boolean) {
         // Shared toggle for now
         toggleGasAlerts(enabled)
+    }
+
+    fun setAlarmSound(soundId: String) {
+        viewModelScope.launch {
+            preferencesManager.setAlarmSoundId(soundId)
+        }
+    }
+
+    fun togglePreview(soundId: String) {
+        if (_isPreviewPlaying.value) {
+            alertAudioManager.stopAlarm()
+            _isPreviewPlaying.value = false
+        } else {
+            val sound = AlertSound.getById(soundId)
+            _isPreviewPlaying.value = true
+            alertAudioManager.startPreview(sound.resId) {
+                _isPreviewPlaying.value = false
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        alertAudioManager.stopAlarm()
     }
 
     fun updateThresholds(restaurantId: String, warn: Int, danger: Int) {

@@ -23,6 +23,7 @@ class PreferencesManager(private val context: Context) {
         val SESSION_UID = stringPreferencesKey("session_uid")
         val SESSION_ROLE = stringPreferencesKey("session_role")
         val SESSION_RESTAURANT_ID = stringPreferencesKey("session_restaurant_id")
+        val SELECTED_ALARM_SOUND_ID = stringPreferencesKey("selected_alarm_sound_id")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
@@ -59,6 +60,16 @@ class PreferencesManager(private val context: Context) {
     val sessionUid: Flow<String?> = context.dataStore.data.map { it[SESSION_UID] }
     val sessionRole: Flow<String?> = context.dataStore.data.map { it[SESSION_ROLE] }
     val sessionRestaurantId: Flow<String?> = context.dataStore.data.map { it[SESSION_RESTAURANT_ID] }
+
+    val selectedAlarmSoundId: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[SELECTED_ALARM_SOUND_ID] ?: "critical_alarm"
+    }
+
+    suspend fun setAlarmSoundId(soundId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[SELECTED_ALARM_SOUND_ID] = soundId
+        }
+    }
 
     suspend fun saveSession(uid: String, role: String, restaurantId: String) {
         context.dataStore.edit { prefs ->
