@@ -42,9 +42,16 @@ class RegistrationViewModel(
 
         Log.d(TAG, "Attempting registration for email: ${trimmedEmail.take(3)}***")
 
+        val isAuthenticated = authRepository.currentUser != null
+
         // Basic Validation
-        if (trimmedFullName.isBlank() || trimmedRestaurantInput.isBlank() || trimmedEmail.isBlank() || trimmedRole.isBlank() || password.isBlank()) {
+        if (trimmedFullName.isBlank() || trimmedRestaurantInput.isBlank() || trimmedEmail.isBlank() || trimmedRole.isBlank()) {
             _registrationState.value = Resource.Error("All fields are required")
+            return
+        }
+
+        if (!isAuthenticated && password.isBlank()) {
+            _registrationState.value = Resource.Error("Password is required for new accounts")
             return
         }
 
@@ -54,14 +61,16 @@ class RegistrationViewModel(
             return
         }
 
-        if (password.length < 6) {
-            _registrationState.value = Resource.Error("Password must be at least 6 characters")
-            return
-        }
+        if (!isAuthenticated) {
+            if (password.length < 6) {
+                _registrationState.value = Resource.Error("Password must be at least 6 characters")
+                return
+            }
 
-        if (password != confirmPassword) {
-            _registrationState.value = Resource.Error("Passwords do not match")
-            return
+            if (password != confirmPassword) {
+                _registrationState.value = Resource.Error("Passwords do not match")
+                return
+            }
         }
 
         viewModelScope.launch {

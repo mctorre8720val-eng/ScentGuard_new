@@ -52,11 +52,11 @@ class LoginViewModel(
         }
     }
 
-    fun signInWithGoogle(idToken: String) {
+    fun signInWithGoogle(idToken: String, nonce: String? = null) {
         viewModelScope.launch {
             _loginState.value = Resource.Loading()
             val result = withContext(Dispatchers.IO) {
-                authRepository.signInWithGoogle(idToken)
+                authRepository.signInWithGoogle(idToken, nonce)
             }
             result.onSuccess {
                 _loginState.value = Resource.Success(it!!)

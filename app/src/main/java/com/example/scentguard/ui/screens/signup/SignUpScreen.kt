@@ -144,24 +144,22 @@ fun SignUpScreen(
                         modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
                     )
 
-                    if (!isCompleteProfileMode) {
-                        TabRow(
-                            selectedTabIndex = selectedTab,
-                            containerColor = Color.Transparent,
-                            divider = {},
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        ) {
-                            Tab(
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0 },
-                                text = { Text("Manager") }
-                            )
-                            Tab(
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1 },
-                                text = { Text("Staff") }
-                            )
-                        }
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    ) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = { Text("Manager") }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = { Text("Staff") }
+                        )
                     }
 
                     ScentGuardCard(

@@ -99,11 +99,13 @@ class AuthRepository(
         }
     }
 
-    suspend fun signInWithGoogle(idToken: String): Result<FirebaseUser?> {
-        Log.d(TAG, "Attempting Google Sign-In")
+    suspend fun signInWithGoogle(idToken: String, nonce: String? = null): Result<FirebaseUser?> {
+        Log.d(TAG, "Attempting Google Sign-In with Firebase")
         return try {
             val firebaseAuth = auth ?: return Result.failure(Exception("Firebase not initialized"))
             val credential = GoogleAuthProvider.getCredential(idToken, null)
+            // Note: If using raw nonce in GetGoogleIdOption, we pass it here if Firebase supported it directly,
+            // but Firebase handles the ID token verification which includes the hashed nonce.
             val result = firebaseAuth.signInWithCredential(credential).await()
             val user = result.user
             Log.d(TAG, "Google Sign-In successful: ${user?.uid}")

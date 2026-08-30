@@ -43,6 +43,9 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
+import java.security.MessageDigest
+import java.util.UUID
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
@@ -87,13 +90,9 @@ fun LoginScreen(
         
         if (loginState is Resource.Success && userProfile is Resource.Error) {
             if (userProfile.message == "MISSING_PROFILE") {
-                val result = snackbarHostState.showSnackbar(
-                    message = "Account found, but profile is incomplete.",
-                    actionLabel = "Complete Now",
-                    duration = SnackbarDuration.Indefinite
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    navController.navigate(Screen.SignUp.route)
+                Log.d("LoginScreen", "No ScentGuard profile detected for authenticated user. Redirecting to Setup.")
+                navController.navigate(Screen.SignUp.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
                 }
             } else {
                 snackbarHostState.showSnackbar(
@@ -229,10 +228,17 @@ fun LoginScreen(
 
                         GoogleButton(
                             onClick = {
+                                val rawNonce = UUID.randomUUID().toString()
+                                val bytes = rawNonce.toByteArray()
+                                val md = MessageDigest.getInstance("SHA-256")
+                                val digest = md.digest(bytes)
+                                val hashedNonce = digest.fold("") { str, it -> str + "%02x".format(it) }
+
                                 val googleIdOption = GetGoogleIdOption.Builder()
                                     .setFilterByAuthorizedAccounts(false)
                                     .setServerClientId("75241057260-05s50pjcl5a7sambng2qa999femjcr2i.apps.googleusercontent.com")
-                                    .setAutoSelectEnabled(true)
+                                    .setAutoSelectEnabled(false)
+                                    .setNonce(hashedNonce)
                                     .build()
 
                                 val request = GetCredentialRequest.Builder()
@@ -245,7 +251,7 @@ fun LoginScreen(
                                         val credential = result.credential
                                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                                         val idToken = googleIdTokenCredential.idToken
-                                        viewModel.signInWithGoogle(idToken)
+                                        viewModel.signInWithGoogle(idToken, hashedNonce)
                                     } catch (e: GetCredentialException) {
                                         Log.e("LoginScreen", "Credential failure: ${e.message}", e)
                                         scope.launch { 
