@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -133,7 +134,8 @@ fun DashboardScreen(
                                     AirQualityHero(
                                         gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
                                         airStatus = liveData?.airStatus ?: "SAFE",
-                                        onViewAnalytics = { navController.navigate(Screen.Reports.route) }
+                                        onViewAnalytics = { navController.navigate(Screen.Reports.route) },
+                                        onCriticalAction = { navController.navigate(Screen.CriticalAlert.route) }
                                     )
                                 }
                                 Box(modifier = Modifier.weight(0.8f)) {
@@ -150,7 +152,8 @@ fun DashboardScreen(
                             AirQualityHero(
                                 gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
                                 airStatus = liveData?.airStatus ?: "SAFE",
-                                onViewAnalytics = { navController.navigate(Screen.Reports.route) }
+                                onViewAnalytics = { navController.navigate(Screen.Reports.route) },
+                                onCriticalAction = { navController.navigate(Screen.CriticalAlert.route) }
                             )
                         }
                         item {
@@ -300,7 +303,8 @@ fun DashboardHeader(user: UserProfile?) {
 fun AirQualityHero(
     gasLevel: Int,
     airStatus: String,
-    onViewAnalytics: () -> Unit
+    onViewAnalytics: () -> Unit,
+    onCriticalAction: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "aura")
     val auraScale by infiniteTransition.animateFloat(
@@ -394,6 +398,9 @@ fun AirQualityHero(
             Spacer(modifier = Modifier.height(48.dp))
             
             Surface(
+                modifier = Modifier.clickable(enabled = airStatus.uppercase() == "DANGER") {
+                    onCriticalAction()
+                },
                 color = statusColor.copy(alpha = 0.05f),
                 shape = CircleShape,
                 border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.1f))

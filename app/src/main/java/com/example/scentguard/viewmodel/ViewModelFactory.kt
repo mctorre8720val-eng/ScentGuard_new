@@ -23,6 +23,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             modelClass.isAssignableFrom(RegistrationViewModel::class.java) -> {
                 RegistrationViewModel(app.authRepository, app.userRepository) as T
             }
+            modelClass.isAssignableFrom(ActionViewModel::class.java) -> {
+                ActionViewModel(app.authRepository, app.userRepository, app.historyRepository) as T
+            }
             modelClass.isAssignableFrom(StaffViewModel::class.java) -> {
                 StaffViewModel(app.userRepository) as T
             }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.scentguard.ui.screens.alerts.CriticalAlertScreen
 import com.example.scentguard.ui.screens.dashboard.DashboardScreen
 import com.example.scentguard.ui.screens.devices.DevicesScreen
 import com.example.scentguard.ui.screens.history.HistoryScreen
@@ -70,6 +71,9 @@ fun SetupNavGraph(
         }
         composable(Screen.Profile.route) { 
             ProfileScreen(navController = navController, mainViewModel = mainViewModel)
+        }
+        composable(Screen.CriticalAlert.route) {
+            CriticalAlertScreen(navController = navController, mainViewModel = mainViewModel)
         }
     }
 }
