@@ -67,8 +67,9 @@ class ActionViewModel(
                             return@addSnapshotListener
                         }
                         
+                        // Get the absolute latest incident for history display, regardless of status
                         val incident = snapshot?.toObjects(Incident::class.java)
-                            ?.firstOrNull { it.status == "IN_PROGRESS" }
+                            ?.firstOrNull() // first because it is ordered by startTime DESC
                         
                         _activeIncident.value = Resource.Success(incident)
                     }
@@ -77,8 +78,27 @@ class ActionViewModel(
     }
 
     fun sendResponse(user: UserProfile, incident: Incident?, message: String) {
+        val currentRestaurant = liveRestaurantData.value
+        val isDanger = currentRestaurant?.airStatus == "DANGER"
+        
+        // 1. Environmental Safety Check (Highest Priority)
+        if (currentRestaurant != null && currentRestaurant.airStatus == "SAFE") {
+            _sendState.value = Resource.Error("Environment is safe. No active alert requires a response.")
+            return
+        }
+
+        // 2. Incident Validation
         if (incident == null) {
-            _sendState.value = Resource.Error("Alert is still synchronizing. Please try again.")
+            if (isDanger) {
+                _sendState.value = Resource.Error("Alert is still synchronizing. Please try again.")
+            } else {
+                _sendState.value = Resource.Error("Environment is safe. No active alert requires a response.")
+            }
+            return
+        }
+
+        if (incident.status == "CLEARED") {
+            _sendState.value = Resource.Error("Environment is safe. No active alert requires a response.")
             return
         }
 

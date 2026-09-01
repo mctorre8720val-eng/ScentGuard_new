@@ -1,0 +1,9 @@
+- `[ ]` Research incident creation and clearing logic
+- `[ ]` Update `ActionViewModel.kt`:
+    - `[ ]` Modify `startRealTimeIncidentListener` to fetch latest incident regardless of status
+    - `[ ]` Implement robust `sendResponse` validation with new error messages
+- `[ ]` Update `CriticalAlertScreen.kt`:
+    - `[ ]` Implement `canRespond` logic
+    - `[ ]` Update UI components (Header, Metrics, Recommendation, Input) based on `canRespond` and `airStatus`
+- `[ ]` Verify build with `./gradlew app:assembleDebug`
+- `[ ]` Manual verification of DANGER -> SAFE transition states

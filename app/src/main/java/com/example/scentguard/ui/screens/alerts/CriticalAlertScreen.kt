@@ -93,11 +93,14 @@ fun CriticalAlertScreen(
                     val restaurant = liveData
                     
                     if (user != null && restaurant != null) {
+                        val canRespond = restaurant.airStatus == "DANGER" && incident?.status != "CLEARED"
+                        
                         CriticalAlertContent(
                             restaurant = restaurant,
                             activeIncident = incident,
                             onSendResponse = { msg -> actionViewModel.sendResponse(user, incident, msg) },
-                            isSending = sendState is Resource.Loading
+                            isSending = sendState is Resource.Loading,
+                            canRespond = canRespond
                         )
                     }
                 }
@@ -119,7 +122,8 @@ fun CriticalAlertContent(
     restaurant: Restaurant,
     activeIncident: Incident?,
     onSendResponse: (String) -> Unit,
-    isSending: Boolean
+    isSending: Boolean,
+    canRespond: Boolean
 ) {
     val scrollState = rememberLazyListState()
     val lastSeen = restaurant.lastSeen?.toDate()?.time ?: 0L
@@ -200,7 +204,7 @@ fun CriticalAlertContent(
         }
 
         // Bottom Controls
-        ResponseInputSection(onSendResponse, isSending, hasResponded)
+        ResponseInputSection(onSendResponse, isSending, hasResponded, canRespond)
     }
 }
 
@@ -331,20 +335,25 @@ fun MetricItem(label: String, value: String, unit: String, isDanger: Boolean) {
 
 @Composable
 fun RecommendationCard(restaurant: Restaurant, hasResponded: Boolean) {
+    val isDanger = restaurant.airStatus == "DANGER"
     val isGasCritical = restaurant.currentGasPpm >= restaurant.thresholdDanger
     val isTempCritical = restaurant.temperature >= restaurant.tempThresholdDanger
     
-    val recommendation = if (hasResponded) {
-        "ScentGuard continues monitoring independently."
-    } else {
-        when {
+    val recommendation = when {
+        !isDanger -> "Environment has returned to safe parameters. No further action needed."
+        hasResponded -> "ScentGuard continues monitoring independently."
+        else -> when {
             isGasCritical && isTempCritical -> "Inspect and Remove Waste & Check Ventilation"
             isGasCritical -> "Inspect and Remove Waste"
             else -> "Check Ventilation"
         }
     }
 
-    val color = if (hasResponded) PremiumGreen else ErrorRed
+    val color = when {
+        !isDanger -> PremiumGreen
+        hasResponded -> PremiumGreen
+        else -> ErrorRed
+    }
 
     ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
@@ -354,14 +363,19 @@ fun RecommendationCard(restaurant: Restaurant, hasResponded: Boolean) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (hasResponded) Icons.Outlined.TrackChanges else Icons.Outlined.Info, 
+                    imageVector = if (!isDanger || hasResponded) Icons.Outlined.TrackChanges else Icons.Outlined.Info, 
                     contentDescription = null, 
                     tint = color, 
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                val statusText = when {
+                    !isDanger -> "Status: SAFE"
+                    hasResponded -> "Monitoring: ACTIVE"
+                    else -> "Recommended Action"
+                }
                 Text(
-                    text = if (hasResponded) "Monitoring: ACTIVE" else "Recommended Action", 
+                    text = statusText, 
                     fontWeight = FontWeight.Bold, 
                     color = color
                 )
@@ -415,7 +429,12 @@ fun StaffResponseItem(response: StaffAction) {
 }
 
 @Composable
-fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasResponded: Boolean) {
+fun ResponseInputSection(
+    onSend: (String) -> Unit, 
+    isSending: Boolean, 
+    hasResponded: Boolean,
+    canRespond: Boolean
+) {
     var text by remember { mutableStateOf("") }
     
     Surface(
@@ -431,9 +450,9 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasRespon
             ) {
                 listOf("Done Removing Waste", "Checking Ventilation", "Area Inspected", "Cleaning...").forEach { chip ->
                     AssistChip(
-                        onClick = { if (!isSending && !hasResponded) onSend(chip) },
+                        onClick = { if (!isSending && canRespond) onSend(chip) },
                         label = { Text(chip) },
-                        enabled = !isSending && !hasResponded,
+                        enabled = !isSending && canRespond,
                         shape = CircleShape
                     )
                 }
@@ -446,7 +465,15 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasRespon
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(if (hasResponded) "Response already recorded" else "Write a quick update...") },
+                placeholder = { 
+                    Text(
+                        when {
+                            !canRespond -> "Environment is safe"
+                            hasResponded -> "Response already recorded"
+                            else -> "Write a quick update..."
+                        }
+                    )
+                },
                 trailingIcon = {
                     if (isSending) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -458,7 +485,7 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasRespon
                                     text = ""
                                 }
                             },
-                            enabled = text.isNotBlank() && !hasResponded
+                            enabled = text.isNotBlank() && canRespond
                         ) {
                             Icon(Icons.AutoMirrored.Outlined.Send, null, tint = MaterialTheme.colorScheme.primary)
                         }
@@ -466,11 +493,11 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasRespon
                 },
                 shape = RoundedCornerShape(24.dp),
                 maxLines = 2,
-                enabled = !isSending && !hasResponded
+                enabled = !isSending && canRespond
             )
             
             Text(
-                text = "ScentGuard continues monitoring independently.",
+                text = if (canRespond) "ScentGuard continues monitoring independently." else "No active alert requires a response.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
