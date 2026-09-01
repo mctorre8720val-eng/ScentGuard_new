@@ -24,8 +24,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.data.model.HistoryItem
 import com.example.scentguard.data.model.HistoryType
+import com.example.scentguard.data.model.MascotAvatars
 import com.example.scentguard.navigation.Screen
 import com.example.scentguard.ui.components.ScentGuardFloatingNav
+import com.example.scentguard.ui.components.ScentGuardMascotAvatar
 import com.example.scentguard.ui.components.ScentGuardNavigationDrawer
 import com.example.scentguard.utils.Resource
 import com.example.scentguard.utils.isScrollingUp
@@ -360,13 +362,23 @@ fun HistoryCard(item: HistoryItem) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                modifier = Modifier.size(44.dp),
-                color = color.copy(alpha = 0.1f),
-                shape = CircleShape
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            if (isStaffResponse) {
+                val mascot = MascotAvatars.getById("robot")
+                if (mascot != null) {
+                    ScentGuardMascotAvatar(
+                        mascot = mascot,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            } else {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    color = color.copy(alpha = 0.1f),
+                    shape = CircleShape
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             
