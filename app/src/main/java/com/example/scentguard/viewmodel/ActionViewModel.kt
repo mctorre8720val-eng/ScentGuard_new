@@ -10,6 +10,7 @@ import com.example.scentguard.utils.Resource
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -53,32 +54,34 @@ class ActionViewModel(
 
                 _activeIncident.value = Resource.Loading()
                 
-                // First fetch the latest active incident ID to listen to
-                val activeResult = historyRepository.getActiveIncident(session.restaurantId)
-                val incident = activeResult.getOrNull()
-                
-                if (incident != null) {
-                    incidentListener = FirebaseFirestore.getInstance()
-                        .collection("restaurants")
-                        .document(session.restaurantId)
-                        .collection("incidents")
-                        .document(incident.id)
-                        .addSnapshotListener { snapshot, error ->
-                            if (error != null) {
-                                _activeIncident.value = Resource.Error(error.message ?: "Sync failed")
-                                return@addSnapshotListener
-                            }
-                            val updated = snapshot?.toObject(Incident::class.java)
-                            _activeIncident.value = Resource.Success(updated)
+                // Robust Sync: Listen for ANY active incident in the sub-collection
+                incidentListener = FirebaseFirestore.getInstance()
+                    .collection("restaurants")
+                    .document(session.restaurantId)
+                    .collection("incidents")
+                    .orderBy("startTime", Query.Direction.DESCENDING)
+                    .limit(10)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error != null) {
+                            _activeIncident.value = Resource.Error(error.message ?: "Sync failed")
+                            return@addSnapshotListener
                         }
-                } else {
-                    _activeIncident.value = Resource.Success(null)
-                }
+                        
+                        val incident = snapshot?.toObjects(Incident::class.java)
+                            ?.firstOrNull { it.status == "IN_PROGRESS" }
+                        
+                        _activeIncident.value = Resource.Success(incident)
+                    }
             }
         }
     }
 
-    fun sendResponse(user: UserProfile, incident: Incident, message: String) {
+    fun sendResponse(user: UserProfile, incident: Incident?, message: String) {
+        if (incident == null) {
+            _sendState.value = Resource.Error("Alert is still synchronizing. Please try again.")
+            return
+        }
+
         viewModelScope.launch {
             if (message.isBlank()) return@launch
             

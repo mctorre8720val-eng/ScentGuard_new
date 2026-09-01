@@ -148,12 +148,34 @@ class ScentGuardWatcherService : Service() {
     }
 
     private fun handleAirStatusTransition(rid: String, old: String, new: String, ppm: Int, temp: Float, ts: Timestamp?) {
+        val anchor = ts ?: Timestamp.now()
         if (new == "DANGER") {
             triggerDangerAlert(ppm, temp)
             val desc = if (ppm >= 1500) "Critical gas concentration alert!" else "Critical temperature threshold reached!"
-            logEvent(rid, "AIR_DANGER", "Hazardous Conditions Detected", desc, HistoryType.ALERT, ppm, "SYSTEM", ts)
-        } else if (old == "DANGER" && (new == "SAFE" || new == "WARN")) {
-            logEvent(rid, "AIR_SAFE", "Area Clear", "Conditions returned to safe parameters", HistoryType.SUCCESS, ppm, "SYSTEM", ts)
+            logEvent(rid, "AIR_DANGER", "Hazardous Conditions Detected", desc, HistoryType.ALERT, ppm, "SYSTEM", anchor)
+            
+            // AUTOMATED INCIDENT LIFECYCLE: Create if missing
+            serviceScope.launch {
+                val app = application as? ScentGuardApplication
+                val incident = com.example.scentguard.data.model.Incident(
+                    id = "inc_${anchor.seconds}_${rid.take(4)}",
+                    restaurantId = rid,
+                    startTime = anchor,
+                    initialGas = ppm,
+                    initialTemp = temp,
+                    triggerType = if (ppm >= 1500) "GAS" else "TEMPERATURE",
+                    actionPerformed = if (ppm >= 1500) "Inspect and Remove Waste" else "Check Ventilation",
+                    status = "IN_PROGRESS"
+                )
+                app?.historyRepository?.createIncidentIfMissing(incident)
+            }
+        } else if (new == "SAFE") {
+            // Environment actually safe - end the incident cycle
+            logEvent(rid, "AIR_SAFE", "Area Clear", "Conditions returned to safe parameters", HistoryType.SUCCESS, ppm, "SYSTEM", anchor)
+            serviceScope.launch {
+                val app = application as? ScentGuardApplication
+                app?.historyRepository?.clearActiveIncident(rid, anchor)
+            }
         }
     }
 

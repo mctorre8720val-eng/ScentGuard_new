@@ -1,55 +1,51 @@
-# Implementation Plan: Fix Wi-Fi Provisioning Error Handling
+# Implementation Plan: Eliminate Firestore Composite Index Requirements
 
-This plan addresses the issue where the ScentGuard app incorrectly reports a successful setup even when the ESP32 fails to connect to Wi-Fi (e.g., when a 5 GHz network is used).
+This plan fixes the `FAILED_PRECONDITION` index errors by refactoring queries that combine filters and ordering into single-field compatible queries with Kotlin-side filtering.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> The fix assumes the ESP32 firmware will be updated to communicate its Wi-Fi connection status back to the app via a new BLE characteristic (`0000FF05`).
+> To avoid creating composite indexes, the app will now fetch a slightly larger window of recent records and filter them in memory. This preserves the existing "No Index" architecture while maintaining data integrity.
+
+## Identified Problem Queries
+
+1.  **ActionViewModel.kt**: `whereEqualTo("status", "IN_PROGRESS")` combined with `orderBy("startTime", DESC)`.
+2.  **HistoryRepository.kt**: `whereIn(category)` combined with `orderBy("timestamp", DESC)`.
+3.  **ReportViewModel.kt (Calculations)**: Manual inspection confirmed `sensor_history` query uses `orderBy("timestamp")` without filters, which is safe. However, I will re-verify the `eventType` usage mentioned in the prompt.
+
+---
 
 ## Proposed Changes
 
-### 1. Permissions & Infrastructure
+### [Core ViewModel]
 
-#### [MODIFY] [AndroidManifest.xml](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/AndroidManifest.xml)
-- Add `ACCESS_WIFI_STATE` and `ACCESS_NETWORK_STATE` to allow frequency detection.
+#### [MODIFY] [ActionViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/ActionViewModel.kt)
+- **Refactor**: Remove `.whereEqualTo("status", "IN_PROGRESS")` from the snapshot listener.
+- **Refactor**: Use `.orderBy("startTime", Query.Direction.DESCENDING).limit(10)`.
+- **Logic**: In the listener, use `snapshot?.toObjects(Incident::class.java)?.firstOrNull { it.status == "IN_PROGRESS" }` to find the active incident.
 
-### 2. Provisioning Logic
+### [Data Repository]
 
-#### [MODIFY] [ProvisioningViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/provisioning/ProvisioningViewModel.kt)
-- **New States**: Add `VerifyingWifi` and `WifiError` to `ProvisioningState`.
-- **Status Tracking**: Add `statusCharUuid` (`0000FF05-0000-1000-8000-00805F9B34FB`) to monitor Wi-Fi results from the ESP32.
-- **Wi-Fi Detection**: Use `WifiManager` to detect if the current network is 5 GHz and expose `wifiWarning` flow.
-- **Improved Workflow**:
-    - Update `sendCredentials` to enable notifications on the status characteristic.
-    - Wait for a specific success/failure code from the hardware instead of a blind 4-second delay.
-    - Implement `resetToCredentials()` to allow retries without full device re-scans.
-
-### 3. User Interface
-
-#### [MODIFY] [ProvisioningScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/provisioning/ProvisioningScreen.kt)
-- **Warning Banner**: Display a warning if the app detects a 5 GHz network before sending credentials.
-- **Detailed Status**: Update the progress indicator to show "Testing Wi-Fi Connection..." during the verification phase.
-- **Error Handling**:
-    - Show a clear "Wi-Fi Connection Failed" screen on error.
-    - Suggest using a 2.4 GHz network.
-    - Provide a "Try Again" button that returns the user to the SSID/Password entry screen.
+#### [MODIFY] [HistoryRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/HistoryRepository.kt)
+- **Refactor**: Remove all `whereIn` category filters from the Firestore `Query` object.
+- **Refactor**: Ensure the query always uses `.orderBy("timestamp", Query.Direction.DESCENDING)`.
+- **Logic**: Move the `when(category)` filtering logic into a post-processing step in Kotlin.
+- **Pagination**: To preserve pagination, the method will fetch a buffer of records (e.g., 200) to ensure enough matching items are found for the requested `limit`.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Audit `ProvisioningViewModel` to ensure it correctly transitions states based on characteristic updates.
-- Verify `WifiManager` logic for frequency detection.
+- Run `./gradlew app:assembleDebug` to verify compilation.
 
 ### Manual Verification
-1. **Test 1 — Valid 2.4 GHz Wi-Fi**
-   - Verify flow: Scanning -> Discovered -> Transferring -> Verifying -> Success.
-2. **Test 2 — 5 GHz-only Wi-Fi**
-   - Verify that the app shows a warning before connecting.
-   - Verify that when ESP32 fails, the app shows "Wi-Fi Connection Failed".
-3. **Test 3 — Wrong Credentials**
-   - Verify that the app handles the failure and allows a retry.
-4. **Test 4 — Retry Flow**
-   - Verify "Try Again" returns to the SSID/Password input without losing the BLE connection if possible.
+1.  **Staff Response Feed**: Open a critical alert. Verify the feed loads and updates in real-time when a response is posted.
+2.  **History Screen**: Toggling "Alerts", "Fan", etc., should still correctly filter the list without an index error in Logcat.
+3.  **Sensor Stability Test**: Verify that keeping the gas at 1600 PPM continues to show the same active incident (deduplication check).
+4.  **Logcat Audit**: Confirm no `FAILED_PRECONDITION` or `The query requires an index` messages appear during navigation.
+
+## Critical Constraints
+- **NO** changes to Firebase Authentication or Rules.
+- **NO** changes to Firestore schema or restaurantId logic.
+- **NO** manual composite index creation.

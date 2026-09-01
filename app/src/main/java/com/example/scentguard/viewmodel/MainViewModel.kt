@@ -84,9 +84,8 @@ class MainViewModel(
             userSession.collectLatest { session ->
                 if (session != null) {
                     // Fetch real logs from HistoryRepository
-                    historyRepository.getHistory(session.restaurantId).onSuccess { snapshot ->
-                        val logs = snapshot.toObjects(HistoryItem::class.java)
-                        _recentActivity.value = logs.take(3)
+                    historyRepository.getHistory(session.restaurantId).onSuccess { response ->
+                        _recentActivity.value = response.items.take(3)
                     }.onFailure {
                         _recentActivity.value = emptyList()
                     }

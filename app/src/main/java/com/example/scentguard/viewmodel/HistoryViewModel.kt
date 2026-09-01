@@ -79,11 +79,10 @@ class HistoryViewModel(
                 startDate = calculateStartDate(_selectedDateRange.value)
             )
             
-            result.onSuccess { snapshot ->
-                val logs = snapshot.toObjects(HistoryItem::class.java)
-                _historyState.value = Resource.Success(logs)
-                lastDocument = snapshot.documents.lastOrNull()
-                hasReachedEnd = logs.size < pageSize
+            result.onSuccess { response ->
+                _historyState.value = Resource.Success(response.items)
+                lastDocument = response.lastDocument
+                hasReachedEnd = response.items.size < pageSize && response.lastDocument == null
             }.onFailure {
                 _historyState.value = Resource.Error(it.message ?: "Failed to load history")
             }
@@ -105,12 +104,11 @@ class HistoryViewModel(
                 startDate = calculateStartDate(_selectedDateRange.value)
             )
             
-            result.onSuccess { snapshot ->
-                val newLogs = snapshot.toObjects(HistoryItem::class.java)
+            result.onSuccess { response ->
                 val currentLogs = (_historyState.value as Resource.Success).data ?: emptyList()
-                _historyState.value = Resource.Success(currentLogs + newLogs)
-                lastDocument = snapshot.documents.lastOrNull()
-                hasReachedEnd = newLogs.size < pageSize
+                _historyState.value = Resource.Success(currentLogs + response.items)
+                lastDocument = response.lastDocument
+                hasReachedEnd = response.items.isEmpty() && response.lastDocument == null
             }
             _isLoadingMore.value = false
         }

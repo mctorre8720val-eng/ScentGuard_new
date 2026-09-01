@@ -96,7 +96,7 @@ fun CriticalAlertScreen(
                         CriticalAlertContent(
                             restaurant = restaurant,
                             activeIncident = incident,
-                            onSendResponse = { msg -> actionViewModel.sendResponse(user, incident!!, msg) },
+                            onSendResponse = { msg -> actionViewModel.sendResponse(user, incident, msg) },
                             isSending = sendState is Resource.Loading
                         )
                     }
@@ -124,6 +124,8 @@ fun CriticalAlertContent(
     val scrollState = rememberLazyListState()
     val lastSeen = restaurant.lastSeen?.toDate()?.time ?: 0L
     val isStale = (System.currentTimeMillis() - lastSeen) > 150000 // 2.5 minutes
+    
+    val hasResponded = activeIncident?.actions?.any { it.isResponse } == true
 
     Column(
         modifier = Modifier
@@ -157,7 +159,10 @@ fun CriticalAlertContent(
         ) {
             // Header
             item {
-                DangerHeader(restaurant.airStatus == "DANGER")
+                DangerHeader(
+                    isDanger = restaurant.airStatus == "DANGER",
+                    hasResponded = hasResponded
+                )
             }
 
             // Metrics
@@ -167,7 +172,7 @@ fun CriticalAlertContent(
 
             // Recommended Action
             item {
-                RecommendationCard(restaurant)
+                RecommendationCard(restaurant, hasResponded)
             }
 
             // Response Feed Title
@@ -195,12 +200,12 @@ fun CriticalAlertContent(
         }
 
         // Bottom Controls
-        ResponseInputSection(onSendResponse, isSending)
+        ResponseInputSection(onSendResponse, isSending, hasResponded)
     }
 }
 
 @Composable
-fun DangerHeader(isDanger: Boolean) {
+fun DangerHeader(isDanger: Boolean, hasResponded: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -212,19 +217,43 @@ fun DangerHeader(isDanger: Boolean) {
         label = "scale"
     )
 
+    val color = when {
+        !isDanger -> PremiumGreen
+        hasResponded -> WarningOrange
+        else -> ErrorRed
+    }
+
+    val icon = when {
+        !isDanger -> Icons.Outlined.CheckCircle
+        hasResponded -> Icons.Outlined.AssignmentTurnedIn
+        else -> Icons.Outlined.ReportGmailerrorred
+    }
+
+    val title = when {
+        !isDanger -> "ENVIRONMENT SAFE ✓"
+        hasResponded -> "RESPONSE RECORDED ✓"
+        else -> "CRITICAL ALERT"
+    }
+
+    val subtitle = when {
+        !isDanger -> "Conditions have returned to safe levels"
+        hasResponded -> "Environment Still DANGER — Monitoring Active"
+        else -> "Immediate physical intervention required"
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.Center) {
             Surface(
-                modifier = Modifier.size(80.dp).let { if (isDanger) it.graphicsLayer { scaleX = scale; scaleY = scale } else it },
+                modifier = Modifier.size(80.dp).let { if (isDanger && !hasResponded) it.graphicsLayer { scaleX = scale; scaleY = scale } else it },
                 shape = CircleShape,
-                color = if (isDanger) ErrorRed.copy(alpha = 0.1f) else WarningOrange.copy(alpha = 0.1f)
+                color = color.copy(alpha = 0.1f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (isDanger) Icons.Outlined.ReportGmailerrorred else Icons.Outlined.WarningAmber,
+                        imageVector = icon,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = if (isDanger) ErrorRed else WarningOrange
+                        tint = color
                     )
                 }
             }
@@ -233,14 +262,14 @@ fun DangerHeader(isDanger: Boolean) {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = if (isDanger) "CRITICAL ALERT" else "ENVIRONMENTAL WARNING",
+            text = title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Black,
-            color = if (isDanger) ErrorRed else WarningOrange
+            color = color
         )
         
         Text(
-            text = if (isDanger) "Immediate physical intervention required" else "Levels are above normal range",
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
@@ -301,26 +330,41 @@ fun MetricItem(label: String, value: String, unit: String, isDanger: Boolean) {
 }
 
 @Composable
-fun RecommendationCard(restaurant: Restaurant) {
+fun RecommendationCard(restaurant: Restaurant, hasResponded: Boolean) {
     val isGasCritical = restaurant.currentGasPpm >= restaurant.thresholdDanger
     val isTempCritical = restaurant.temperature >= restaurant.tempThresholdDanger
     
-    val recommendation = when {
-        isGasCritical && isTempCritical -> "Inspect and Remove Waste & Check Ventilation"
-        isGasCritical -> "Inspect and Remove Waste"
-        else -> "Check Ventilation"
+    val recommendation = if (hasResponded) {
+        "ScentGuard continues monitoring independently."
+    } else {
+        when {
+            isGasCritical && isTempCritical -> "Inspect and Remove Waste & Check Ventilation"
+            isGasCritical -> "Inspect and Remove Waste"
+            else -> "Check Ventilation"
+        }
     }
+
+    val color = if (hasResponded) PremiumGreen else ErrorRed
 
     ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = ErrorRed.copy(alpha = 0.05f),
-        borderColor = ErrorRed.copy(alpha = 0.1f)
+        containerColor = color.copy(alpha = 0.05f),
+        borderColor = color.copy(alpha = 0.1f)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Info, null, tint = ErrorRed, modifier = Modifier.size(20.dp))
+                Icon(
+                    imageVector = if (hasResponded) Icons.Outlined.TrackChanges else Icons.Outlined.Info, 
+                    contentDescription = null, 
+                    tint = color, 
+                    modifier = Modifier.size(20.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Recommended Action", fontWeight = FontWeight.Bold, color = ErrorRed)
+                Text(
+                    text = if (hasResponded) "Monitoring: ACTIVE" else "Recommended Action", 
+                    fontWeight = FontWeight.Bold, 
+                    color = color
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -371,7 +415,7 @@ fun StaffResponseItem(response: StaffAction) {
 }
 
 @Composable
-fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean) {
+fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean, hasResponded: Boolean) {
     var text by remember { mutableStateOf("") }
     
     Surface(
@@ -387,9 +431,9 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean) {
             ) {
                 listOf("Done Removing Waste", "Checking Ventilation", "Area Inspected", "Cleaning...").forEach { chip ->
                     AssistChip(
-                        onClick = { if (!isSending) onSend(chip) },
+                        onClick = { if (!isSending && !hasResponded) onSend(chip) },
                         label = { Text(chip) },
-                        enabled = !isSending,
+                        enabled = !isSending && !hasResponded,
                         shape = CircleShape
                     )
                 }
@@ -402,7 +446,7 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean) {
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Write a quick update...") },
+                placeholder = { Text(if (hasResponded) "Response already recorded" else "Write a quick update...") },
                 trailingIcon = {
                     if (isSending) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -414,7 +458,7 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean) {
                                     text = ""
                                 }
                             },
-                            enabled = text.isNotBlank()
+                            enabled = text.isNotBlank() && !hasResponded
                         ) {
                             Icon(Icons.AutoMirrored.Outlined.Send, null, tint = MaterialTheme.colorScheme.primary)
                         }
@@ -422,7 +466,7 @@ fun ResponseInputSection(onSend: (String) -> Unit, isSending: Boolean) {
                 },
                 shape = RoundedCornerShape(24.dp),
                 maxLines = 2,
-                enabled = !isSending
+                enabled = !isSending && !hasResponded
             )
             
             Text(

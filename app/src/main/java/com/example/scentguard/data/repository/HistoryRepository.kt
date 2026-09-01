@@ -13,31 +13,27 @@ import kotlinx.coroutines.tasks.await
 class HistoryRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    data class HistoryResponse(
+        val items: List<HistoryItem>,
+        val lastDocument: com.google.firebase.firestore.DocumentSnapshot?
+    )
+
     suspend fun getHistory(
         restaurantId: String,
         limit: Long = 50,
         lastDocument: com.google.firebase.firestore.DocumentSnapshot? = null,
         category: String? = null,
         startDate: java.util.Date? = null
-    ): Result<com.google.firebase.firestore.QuerySnapshot> {
+    ): Result<HistoryResponse> {
         if (restaurantId.isBlank()) return Result.failure(Exception("Invalid Restaurant ID"))
         
         return try {
-            var query = firestore.collection("restaurants")
+            var query: Query = firestore.collection("restaurants")
                 .document(restaurantId)
                 .collection("logs")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
 
-            if (category != null && category != "All") {
-                when (category) {
-                    "Alerts" -> query = query.whereIn("type", listOf("ALERT", "WARNING"))
-                    "Fan" -> query = query.whereIn("eventType", listOf("FAN_ON", "FAN_OFF"))
-                    "Devices" -> query = query.whereIn("eventType", listOf("DEVICE_CONNECT", "DEVICE_DISCONNECT"))
-                    "Users" -> query = query.whereIn("eventType", listOf("USER_LOGIN", "USER_CHANGE", "MEMBER_JOIN", "MEMBER_REMOVE"))
-                    "System" -> query = query.whereIn("eventType", listOf("SYSTEM_START", "SYSTEM_UPDATE", "AIR_SAFE"))
-                }
-            }
-
+            // Single-field filters are safe with orderBy on the same field
             if (startDate != null) {
                 query = query.whereGreaterThanOrEqualTo("timestamp", com.google.firebase.Timestamp(startDate))
             }
@@ -46,8 +42,29 @@ class HistoryRepository(
                 query = query.startAfter(lastDocument)
             }
 
-            val snapshot = query.limit(limit).get().await()
-            Result.success(snapshot)
+            // Fetch more than requested if we are filtering in Kotlin
+            val fetchLimit = if (category != null && category != "All") limit * 4 else limit
+            val snapshot = query.limit(fetchLimit).get().await()
+            
+            val allItems = snapshot.toObjects(HistoryItem::class.java)
+            
+            // Filter in Kotlin to avoid composite index
+            val filteredItems = if (category != null && category != "All") {
+                allItems.filter { item ->
+                    when (category) {
+                        "Alerts" -> item.type == HistoryType.ALERT || item.type == HistoryType.WARNING
+                        "Fan" -> item.eventType == "FAN_ON" || item.eventType == "FAN_OFF"
+                        "Devices" -> item.eventType == "DEVICE_CONNECT" || item.eventType == "DEVICE_DISCONNECT"
+                        "Users" -> listOf("USER_LOGIN", "USER_CHANGE", "MEMBER_JOIN", "MEMBER_REMOVE").contains(item.eventType)
+                        "System" -> listOf("SYSTEM_START", "SYSTEM_UPDATE", "AIR_SAFE").contains(item.eventType)
+                        else -> true
+                    }
+                }.take(limit.toInt())
+            } else {
+                allItems
+            }
+
+            Result.success(HistoryResponse(filteredItems, snapshot.documents.lastOrNull()))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -108,6 +125,56 @@ class HistoryRepository(
                 .collection("incidents")
                 .document(incidentId)
                 .update("actions", FieldValue.arrayUnion(response))
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Creates a new incident document ONLY if there isn't an active one already.
+     * This prevents duplicate incidents for the same danger cycle.
+     */
+    suspend fun createIncidentIfMissing(incident: Incident): Result<Unit> {
+        if (incident.restaurantId.isBlank() || incident.id.isBlank()) {
+            return Result.failure(Exception("Invalid incident data"))
+        }
+        return try {
+            val active = getActiveIncident(incident.restaurantId).getOrNull()
+            if (active != null) {
+                return Result.success(Unit) // Already exists
+            }
+            
+            firestore.collection("restaurants")
+                .document(incident.restaurantId)
+                .collection("incidents")
+                .document(incident.id)
+                .set(incident)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Marks the most recent active incident as CLEARED when the environment becomes SAFE.
+     */
+    suspend fun clearActiveIncident(restaurantId: String, clearanceTime: Timestamp): Result<Unit> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid Restaurant ID"))
+        return try {
+            val activeResult = getActiveIncident(restaurantId)
+            val incident = activeResult.getOrNull() ?: return Result.success(Unit)
+
+            firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("incidents")
+                .document(incident.id)
+                .update(
+                    "status", "CLEARED",
+                    "environmentalClearanceTime", clearanceTime
+                )
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
