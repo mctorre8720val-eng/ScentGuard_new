@@ -9,6 +9,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.location.LocationManager
+import android.net.wifi.WifiManager
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -29,6 +30,7 @@ sealed class ProvisioningState {
     object Verifying : ProvisioningState()
     object Success : ProvisioningState()
     data class Error(val message: String) : ProvisioningState()
+    object WifiFailed : ProvisioningState()
 }
 
 @SuppressLint("MissingPermission")
@@ -36,43 +38,79 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
     private val tag = "ProvisioningVM"
     private val bluetoothManager = application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val wifiManager = application.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private val adapter = bluetoothManager.adapter
 
     private val _state = MutableStateFlow<ProvisioningState>(ProvisioningState.Idle)
     val state: StateFlow<ProvisioningState> = _state.asStateFlow()
+
+    private val _wifiWarning = MutableStateFlow<String?>(null)
+    val wifiWarning: StateFlow<String?> = _wifiWarning.asStateFlow()
 
     private var bluetoothGatt: BluetoothGatt? = null
     private val serviceUuid = UUID.fromString("0000FF01-0000-1000-8000-00805F9B34FB")
     private val ssidCharUuid = UUID.fromString("0000FF02-0000-1000-8000-00805F9B34FB")
     private val passCharUuid = UUID.fromString("0000FF03-0000-1000-8000-00805F9B34FB")
     private val ridCharUuid = UUID.fromString("0000FF04-0000-1000-8000-00805F9B34FB")
+    private val statusCharUuid = UUID.fromString("0000FF05-0000-1000-8000-00805F9B34FB")
+    private val configDescriptorUuid = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
+
+    init {
+        checkWifiFrequency()
+    }
+
+    private fun checkWifiFrequency() {
+        try {
+            val wifiInfo = wifiManager.connectionInfo
+            if (wifiInfo != null) {
+                val freq = wifiInfo.frequency
+                Log.d(tag, "Current Wi-Fi frequency: $freq MHz")
+                if (freq > 4900) {
+                    _wifiWarning.value = "You are on a 5 GHz network. ESP32 requires 2.4 GHz."
+                } else {
+                    _wifiWarning.value = null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Could not detect Wi-Fi frequency: ${e.message}")
+        }
+    }
+
+    fun retryWithNewCredentials() {
+        // Reset to Idle to allow re-entry of credentials
+        // We stop any current GATT session to ensure fresh start
+        closeGatt()
+        _state.value = ProvisioningState.Idle
+    }
+
+    private fun closeGatt() {
+        try {
+            bluetoothGatt?.disconnect()
+            bluetoothGatt?.close()
+            bluetoothGatt = null
+        } catch (e: Exception) {
+            Log.e(tag, "Error closing GATT: ${e.message}")
+        }
+    }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
             val scanRecord = result.scanRecord
-            val rssi = result.rssi
-            val address = device.address
-            
-            // CRITICAL FIX: Extract name from ScanRecord if device.name is null
             val name = scanRecord?.deviceName ?: try { device.name } catch (e: SecurityException) { null } ?: "Unknown"
             val uuids = scanRecord?.serviceUuids
 
-            Log.d(tag, ">>> SCAN RESULT: Name=$name | Address=$address | RSSI=$rssi | UUIDs=$uuids")
-
-            // Hybrid Matching: Match by name or service UUID
             val isScentGuard = name.contains("ScentGuard", ignoreCase = true) || 
                               uuids?.any { it.uuid == serviceUuid } == true
 
             if (isScentGuard) {
-                Log.i(tag, ">>> SUCCESS: ScentGuard-ESP32 identified! Matching via ${if (name.contains("ScentGuard")) "Name" else "UUID"}")
+                Log.i(tag, "ScentGuard-ESP32 identified!")
                 _state.value = ProvisioningState.DeviceDiscovered(device)
                 stopScan()
             }
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.e(tag, ">>> SCAN FAILED: Error Code $errorCode")
             _state.value = ProvisioningState.Error("Scan failed: $errorCode")
         }
     }
@@ -81,8 +119,6 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
         val adapterActive = adapter?.isEnabled == true
         val locationActive = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
                              locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        
-        Log.d(tag, ">>> START SCAN REQUESTED. BT: $adapterActive, GPS: $locationActive")
         
         if (!adapterActive) {
             _state.value = ProvisioningState.Error("Bluetooth is disabled")
@@ -99,35 +135,22 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
         try {
             val scanner = adapter.bluetoothLeScanner
             if (scanner == null) {
-                Log.e(tag, ">>> ERROR: BluetoothLeScanner is NULL")
                 _state.value = ProvisioningState.Error("Scanner unavailable")
                 return
             }
 
-            Log.d(tag, ">>> INITIATING AGGRESSIVE UNFILTERED SCAN...")
             val settings = ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-                .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
                 .build()
                 
-            // Use null filters to ensure we see EVERYTHING
             scanner.startScan(null, settings, scanCallback)
-            Log.i(tag, ">>> SCAN LIVE")
-            
-        } catch (e: SecurityException) {
-            Log.e(tag, ">>> SECURITY EXCEPTION: Permissions missing", e)
-            _state.value = ProvisioningState.Error("Permissions missing")
         } catch (e: Exception) {
-            Log.e(tag, ">>> GENERAL EXCEPTION: ${e.message}", e)
             _state.value = ProvisioningState.Error("Failed to start scan")
         }
         
-        // Timeout after 30 seconds
         viewModelScope.launch {
             delay(30000)
             if (_state.value is ProvisioningState.Scanning) {
-                Log.w(tag, ">>> SCAN TIMEOUT REACHED")
                 stopScan()
                 _state.value = ProvisioningState.Error("No ScentGuard found. Reset ESP32 and try again.")
             }
@@ -135,51 +158,68 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun stopScan() {
-        Log.d(tag, ">>> STOP SCAN REQUESTED")
         try {
             adapter?.bluetoothLeScanner?.stopScan(scanCallback)
-        } catch (e: Exception) {
-            Log.e(tag, "Error stopping scan: ${e.message}")
-        }
+        } catch (e: Exception) {}
     }
 
     fun connectAndProvision(device: BluetoothDevice, ssid: String, pass: String, rid: String) {
-        val deviceName = try { device.name ?: "ESP32" } catch (e: SecurityException) { "ESP32" }
-        Log.d(tag, "Connecting to GATT: $deviceName (${device.address}) | Assigning RID: $rid")
+        Log.d(tag, "Connecting to GATT for provisioning...")
         _state.value = ProvisioningState.Connecting
         
         bluetoothGatt = device.connectGatt(getApplication(), false, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.i(tag, "GATT connected! Waiting 1s before service discovery...")
+                    Log.i(tag, "GATT connected! Discovering services...")
                     viewModelScope.launch {
-                        delay(1000) // Reliability delay
+                        delay(1000)
                         gatt.discoverServices()
                     }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.w(tag, "GATT disconnected. Status: $status")
-                    if (_state.value !is ProvisioningState.Success) {
-                        _state.value = ProvisioningState.Error("Connection failed ($status)")
+                    if (_state.value !is ProvisioningState.Success && _state.value !is ProvisioningState.WifiFailed) {
+                        _state.value = ProvisioningState.Error("Connection lost ($status)")
                     }
                 }
             }
 
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Log.i(tag, "Services discovered successfully")
                     val service = gatt.getService(serviceUuid)
                     if (service != null) {
-                        Log.i(tag, "ScentGuard Service found ($serviceUuid)")
+                        Log.i(tag, "ScentGuard Service found")
                         _state.value = ProvisioningState.Transferring
                         sendCredentials(gatt, service, ssid, pass, rid)
                     } else {
-                        Log.e(tag, "ScentGuard Service NOT found in GATT server. Checking all services...")
-                        gatt.services.forEach { s -> Log.d(tag, "Found service: ${s.uuid}") }
-                        _state.value = ProvisioningState.Error("Invalid hardware version")
+                        _state.value = ProvisioningState.Error("Incompatible hardware")
                     }
                 } else {
-                    Log.e(tag, "Service discovery failed with status: $status")
                     _state.value = ProvisioningState.Error("GATT Service error")
+                }
+            }
+
+            override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+                if (characteristic.uuid == statusCharUuid) {
+                    val result = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
+                    Log.i(tag, ">>> Wi-Fi Status Received: $result")
+                    
+                    viewModelScope.launch {
+                        when (result) {
+                            1 -> {
+                                Log.i(tag, "Success!")
+                                _state.value = ProvisioningState.Success
+                                delay(2000)
+                                gatt.disconnect()
+                            }
+                            2 -> {
+                                Log.e(tag, "Wi-Fi Failed!")
+                                _state.value = ProvisioningState.WifiFailed
+                            }
+                            else -> {
+                                // Potentially intermediate states
+                            }
+                        }
+                    }
                 }
             }
         })
@@ -191,38 +231,48 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
                 val ssidChar = service.getCharacteristic(ssidCharUuid)
                 val passChar = service.getCharacteristic(passCharUuid)
                 val ridChar = service.getCharacteristic(ridCharUuid)
+                val statusChar = service.getCharacteristic(statusCharUuid)
 
                 if (ssidChar != null && passChar != null && ridChar != null) {
-                    Log.d(tag, "Transmitting credentials and Restaurant ID...")
+                    // Enable Notifications on statusChar
+                    if (statusChar != null) {
+                        Log.d(tag, "Enabling notifications for status updates...")
+                        gatt.setCharacteristicNotification(statusChar, true)
+                        val descriptor = statusChar.getDescriptor(configDescriptorUuid)
+                        if (descriptor != null) {
+                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                            gatt.writeDescriptor(descriptor)
+                            delay(500)
+                        }
+                    }
+
+                    Log.d(tag, "Writing credentials...")
                     
-                    // 1. Write SSID
                     ssidChar.setValue(ssid)
                     gatt.writeCharacteristic(ssidChar)
-                    delay(1000) 
+                    delay(800) 
 
-                    // 2. Write Password
                     passChar.setValue(pass)
                     gatt.writeCharacteristic(passChar)
-                    delay(1000)
+                    delay(800)
 
-                    // 3. Write Restaurant ID
                     ridChar.setValue(rid)
                     gatt.writeCharacteristic(ridChar)
-                    delay(1000)
+                    delay(800)
 
-                    Log.i(tag, "All data sent. Waiting for hardware restart...")
+                    Log.i(tag, "Data sent. Waiting for Wi-Fi test...")
                     _state.value = ProvisioningState.Verifying
-                    delay(4000) 
                     
-                    Log.i(tag, "Provisioning Success!")
-                    _state.value = ProvisioningState.Success
-                    gatt.disconnect()
+                    // Safety timeout for Wi-Fi verification
+                    delay(60000)
+                    if (_state.value == ProvisioningState.Verifying) {
+                        _state.value = ProvisioningState.Error("Verification timeout")
+                        gatt.disconnect()
+                    }
                 } else {
-                    Log.e(tag, "GATT Characteristics missing! SSID: ${ssidChar!=null}, PASS: ${passChar!=null}, RID: ${ridChar!=null}")
-                    _state.value = ProvisioningState.Error("Incompatible firmware")
+                    _state.value = ProvisioningState.Error("Hardware characteristics missing")
                 }
             } catch (e: Exception) {
-                Log.e(tag, "Credential transfer error: ${e.message}")
                 _state.value = ProvisioningState.Error("Transfer failed")
             }
         }
@@ -230,10 +280,7 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
 
     override fun onCleared() {
         super.onCleared()
-        try {
-            bluetoothGatt?.disconnect()
-            bluetoothGatt?.close()
-        } catch (e: Exception) {}
+        closeGatt()
         stopScan()
     }
 }

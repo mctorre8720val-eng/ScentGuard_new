@@ -2,6 +2,7 @@ package com.example.scentguard.ui.screens.provisioning
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.scentguard.ui.components.ScentGuardButton
@@ -35,6 +38,7 @@ fun ProvisioningScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val session by mainViewModel.userSession.collectAsState()
+    val wifiWarning by viewModel.wifiWarning.collectAsState()
     
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -82,6 +86,20 @@ fun ProvisioningScreen(
                     
                     Spacer(Modifier.height(32.dp))
                     
+                    if (wifiWarning != null) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error)
+                                Spacer(Modifier.width(12.dp))
+                                Text(wifiWarning!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                            }
+                        }
+                    }
+
                     ScentGuardCard(modifier = Modifier.fillMaxWidth()) {
                         Text("Enter Restaurant Wi-Fi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
@@ -126,9 +144,13 @@ fun ProvisioningScreen(
                     val statusText = when(s) {
                         is ProvisioningState.Connecting -> "Connecting to ESP32..."
                         is ProvisioningState.Transferring -> "Sending Credentials..."
-                        else -> "Verifying Wi-Fi Connection..."
+                        else -> "Testing Wi-Fi Connection..."
                     }
                     Text(statusText, style = MaterialTheme.typography.titleMedium)
+                    if (s is ProvisioningState.Verifying) {
+                        Spacer(Modifier.height(12.dp))
+                        Text("ESP32 is checking internet access. Please wait...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
 
                 is ProvisioningState.Success -> {
@@ -140,11 +162,23 @@ fun ProvisioningScreen(
                     ScentGuardButton(text = "Go to Dashboard", onClick = { navController.popBackStack() })
                 }
 
+                is ProvisioningState.WifiFailed -> {
+                    Icon(Icons.Outlined.SignalWifiConnectedNoInternet4, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(80.dp))
+                    Spacer(Modifier.height(24.dp))
+                    Text("Wi-Fi Connection Failed", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("ESP32 could not connect to internet. Check your SSID and Password.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    Text("Note: ESP32 requires a 2.4 GHz network.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(32.dp))
+                    ScentGuardButton(text = "Try Again", onClick = { viewModel.retryWithNewCredentials() })
+                }
+
                 is ProvisioningState.Error -> {
                     Icon(Icons.Outlined.ErrorOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(80.dp))
                     Spacer(Modifier.height(24.dp))
-                    Text("Setup Failed", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(s.message, color = MaterialTheme.colorScheme.error)
+                    Text("Setup Error", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(s.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(32.dp))
                     ScentGuardButton(text = "Try Again", onClick = { viewModel.startScan() })
                 }
@@ -160,6 +194,6 @@ fun InfoSection(title: String, body: String) {
         Spacer(Modifier.height(24.dp))
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        Text(body, style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(body, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
     }
 }
