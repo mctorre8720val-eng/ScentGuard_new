@@ -1,49 +1,54 @@
-# Walkthrough: Critical State Separation
+# Walkthrough: Enhanced Alert Lifecycle & Staff Response UI
 
-I have implemented the strict separation between incident history display and response permissions in the Staff Response Feed. This ensures that while staff can always see the history of the latest incident, they can only submit responses when there is a genuine, active danger.
+I have implemented a series of updates to improve the clarity and reliability of the Staff Response Feed and the System History logs. These changes strictly separate historical visibility from active response capability and introduce a specialized UI for staff-driven actions.
 
-## Changes Made
+## 1. Critical State Separation
 
-### Action & Logic Layer
+I have implemented strict logic to ensure staff can view the history of the latest incident without being allowed to submit responses to a resolved alert.
+
+### Changes Made
 
 #### [ActionViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/ActionViewModel.kt)
-- **Persistent History**: Modified the Firestore listener to fetch the latest incident regardless of whether it is `IN_PROGRESS` or `CLEARED`. This ensures the feed doesn't disappear when the environment becomes safe.
-- **Robust Validation**: `sendResponse` now enforces three levels of checks:
-    1. **Environment Check**: Rejects responses if `airStatus == "SAFE"`.
-    2. **Incident Existence**: Only shows "Synchronizing" if the environment is `DANGER` but the incident is missing.
-    3. **Status Check**: Rejects responses if the incident is `CLEARED`.
-- **Error Messages**: Implemented the exact required strings:
-    - `"Environment is safe. No active alert requires a response."`
-    - `"Alert is still synchronizing. Please try again."`
-
-### UI Layer
+- **Persistent History**: The Firestore listener now fetches the absolute latest incident regardless of its status (`IN_PROGRESS` or `CLEARED`).
+- **Server-Side Style Validation**: `sendResponse` now enforces the environment status:
+    - Rejects responses if `airStatus == "SAFE"`.
+    - Rejects responses if the incident is `CLEARED`.
+    - Returns the required error message: `"Environment is safe. No active alert requires a response."`
 
 #### [CriticalAlertScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/alerts/CriticalAlertScreen.kt)
-- **`canRespond` Logic**: Centralized the permission logic:
-  ```kotlin
-  val canRespond = restaurant.airStatus == "DANGER" && incident?.status != "CLEARED"
-  ```
-- **Responsive Header**: The `DangerHeader` reacts to `airStatus` and `hasResponded`, showing "ENVIRONMENT SAFE ✓" when conditions clear.
-- **Adaptive Recommendation**: The `RecommendationCard` now explicitly states "Environment has returned to safe parameters" when the danger has passed.
-- **Protected Input Section**:
-    - The `ResponseInputSection` disables all interaction (chips and text box) when `canRespond` is false.
-    - Updated placeholders and helper text to inform the user why controls are disabled.
+- **`canRespond` Permission**: Centralized the permission logic to `restaurant.airStatus == "DANGER" && incident?.status != "CLEARED"`.
+- **Protected Controls**: The `ResponseInputSection` now disables chips, text fields, and buttons when the environment is safe, preventing invalid responses.
+- **Adaptive UI**: The header and recommendation card explicitly transition to "SAFE" states once conditions normalize.
+
+---
+
+## 2. Staff Response Distinction in History
+
+I have updated the System Logs / History UI to make staff actions immediately recognizable from automated system events.
+
+### Changes Made
+
+#### [HistoryScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/history/HistoryScreen.kt)
+- **Detection**: Staff logs are now detected using the `STAFF_UPDATE` event type.
+- **Iconography**: Replaced standard system icons with a **Person icon** (`Icons.Outlined.Person`) for staff responses.
+- **Styling**: Staff responses now use a subtle `primaryContainer` background to stand out from normal white/surface system logs.
+- **Parsing**: The UI now parses the staff name and message from the description (e.g., "John: Done Removing Waste") and displays the name in bold for better readability.
+
+---
 
 ## Verification Results
 
 ### Automated Tests
 - Ran `./gradlew app:assembleDebug` - **Passed**.
 
-### Manual Verification Scenarios (Simulated Logic)
+### Visual & Logic Audit
 
-| State | Header | Controls | Message |
-| :--- | :--- | :--- | :--- |
-| **DANGER + Active** | CRITICAL ALERT | Enabled | "Write a quick update..." |
-| **DANGER + Responded** | RESPONSE RECORDED | Disabled | "Response already recorded" |
-| **SAFE + Cleared** | ENVIRONMENT SAFE | Disabled | "Environment is safe" |
+| Component | Normal System Log | Staff Response Log |
+| :--- | :--- | :--- |
+| **Icon** | Info / Warning / Error | 👤 Person |
+| **Label** | "System Event" (or actual title) | "Staff Response" |
+| **Background** | Standard Surface | 🟦 Primary Container (Subtle) |
+| **Content** | Full description | **Name** + Message |
 
 > [!NOTE]
-> The staff response feed (names, messages, timestamps) remains fully visible in the "SAFE + Cleared" state, allowing for historical review of the incident resolution.
-
-> [!IMPORTANT]
-> The transition from DANGER to SAFE is handled gracefully. Even if a user attempts to tap a response during the exact moment of transition, the `ActionViewModel` will catch the change and return the "Environment is safe" error instead of creating duplicate incidents or crashing.
+> All backend data structures and Firestore rules remain unchanged. These improvements are purely at the logic and UI representation layer to improve operator efficiency.

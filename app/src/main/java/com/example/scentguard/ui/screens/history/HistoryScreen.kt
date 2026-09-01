@@ -320,26 +320,41 @@ fun HistorySkeletonList() {
 
 @Composable
 fun HistoryCard(item: HistoryItem) {
-    val color = when (item.type) {
-        HistoryType.INFO -> MaterialTheme.colorScheme.primary
-        HistoryType.WARNING -> Color(0xFFFF9500)
-        HistoryType.ALERT -> MaterialTheme.colorScheme.error
-        HistoryType.SUCCESS -> Color(0xFF34C759)
+    val isStaffResponse = item.eventType == "STAFF_UPDATE"
+    
+    val color = when {
+        isStaffResponse -> MaterialTheme.colorScheme.primary
+        item.type == HistoryType.INFO -> MaterialTheme.colorScheme.primary
+        item.type == HistoryType.WARNING -> Color(0xFFFF9500)
+        item.type == HistoryType.ALERT -> MaterialTheme.colorScheme.error
+        item.type == HistoryType.SUCCESS -> Color(0xFF34C759)
+        else -> MaterialTheme.colorScheme.primary
     }
 
-    val icon = when (item.type) {
-        HistoryType.INFO -> Icons.Outlined.Info
-        HistoryType.WARNING -> Icons.Outlined.Warning
-        HistoryType.ALERT -> Icons.Outlined.ErrorOutline
-        HistoryType.SUCCESS -> Icons.Outlined.CheckCircle
+    val icon = when {
+        isStaffResponse -> Icons.Outlined.Person
+        item.type == HistoryType.INFO -> Icons.Outlined.Info
+        item.type == HistoryType.WARNING -> Icons.Outlined.Warning
+        item.type == HistoryType.ALERT -> Icons.Outlined.ErrorOutline
+        item.type == HistoryType.SUCCESS -> Icons.Outlined.CheckCircle
+        else -> Icons.Outlined.Info
+    }
+
+    val backgroundColor = if (isStaffResponse) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.surface
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.Black.copy(alpha = 0.05f))
+        color = backgroundColor,
+        shadowElevation = if (isStaffResponse) 0.dp else 2.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            if (isStaffResponse) 1.dp else 0.5.dp, 
+            if (isStaffResponse) color.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f)
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -347,7 +362,7 @@ fun HistoryCard(item: HistoryItem) {
         ) {
             Surface(
                 modifier = Modifier.size(44.dp),
-                color = color.copy(alpha = 0.05f),
+                color = color.copy(alpha = 0.1f),
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -358,8 +373,44 @@ fun HistoryCard(item: HistoryItem) {
             Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = item.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val displayTitle = if (isStaffResponse) "Staff Response" else item.title
+                
+                Text(
+                    text = displayTitle, 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.Bold,
+                    color = if (isStaffResponse) color else MaterialTheme.colorScheme.onSurface
+                )
+                
+                if (isStaffResponse) {
+                    val parts = item.description.split(": ", limit = 2)
+                    if (parts.size == 2) {
+                        Text(
+                            text = parts[0], 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Text(
+                            text = parts[1], 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = item.description, 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Text(
+                        text = item.description, 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Text(
                     text = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(item.timestamp.toDate()),
                     style = MaterialTheme.typography.labelSmall,

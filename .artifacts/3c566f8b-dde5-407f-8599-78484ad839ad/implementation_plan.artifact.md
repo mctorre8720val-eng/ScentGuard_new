@@ -1,48 +1,34 @@
-# Implementation Plan: Critical State Separation
+# Implementation Plan: Staff Response Distinction in History UI
 
-Separate the display of incident history from the ability to submit new responses. Ensure that responses are only allowed when the environment is in a `DANGER` state and the incident is not `CLEARED`.
-
-## User Review Required
-
-> [!IMPORTANT]
-> The `ActionViewModel` will now fetch the latest incident regardless of its status (`IN_PROGRESS` or `CLEARED`). This ensures that the response history for the most recent incident remains visible to staff even after the danger has passed.
+Enhance the System Logs / History UI to visually distinguish Staff Response entries from standard system logs using specialized iconography, labeling, and container styling.
 
 ## Proposed Changes
 
-### Action & Data Layer
-
-#### [MODIFY] [ActionViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/ActionViewModel.kt)
-- **Incident Fetching**: Update `startRealTimeIncidentListener` to remove the `.firstOrNull { it.status == "IN_PROGRESS" }` filter. It will now fetch the most recent incident from the `startTime` sorted list.
-- **`sendResponse` Validation**:
-    - Add checks for `liveRestaurantData.value?.airStatus == "SAFE"` and `incident.status == "CLEARED"`.
-    - Return the specific error message: `"Environment is safe. No active alert requires a response."`
-    - Retain the "synchronizing" check only for when the incident is actually null while in a `DANGER` state.
-
 ### UI Layer
 
-#### [MODIFY] [CriticalAlertScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/alerts/CriticalAlertScreen.kt)
-- **Response Permission Logic**: Introduce a `canRespond` boolean calculated as `restaurant.airStatus == "DANGER" && activeIncident?.status != "CLEARED"`.
-- **`CriticalAlertContent`**: Pass `canRespond` to `ResponseInputSection`.
-- **`ResponseInputSection`**:
-    - Disable chips and text input if `!canRespond`.
-    - Update placeholder text and helper text to reflect the "Safe" state.
-- **`RecommendationCard`**: Ensure it reflects that monitoring is active or conditions are safe based on `airStatus`.
+#### [MODIFY] [HistoryScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/history/HistoryScreen.kt)
+- **Staff Response Detection**: Identify staff response entries using `item.eventType == "STAFF_UPDATE"`.
+- **Icon Update**: Use `Icons.Outlined.Person` for staff response entries.
+- **Container Styling**:
+    - Apply a subtle `primaryContainer` background to Staff Response logs to distinguish them from the standard `surface` background of system logs.
+    - Adjust border and shadow to maintain professional appearance.
+- **Labeling & Formatting**:
+    - Force the label to "Staff Response" for these entries.
+    - Parse the `description` (format: `Name: Message`) to display the Staff Name and Message separately for better readability, matching the requested design.
+- **Color Consistency**: Use `MaterialTheme.colorScheme.primary` as the accent color for staff responses to align with the ScentGuard M3 theme.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `./gradlew app:assembleDebug` to ensure compilation and basic build integrity.
+- Run `./gradlew app:assembleDebug` to ensure compilation and UI integrity.
 
 ### Manual Verification
-1.  **DANGER State**:
-    - Verify alert header shows "CRITICAL ALERT".
-    - Verify response controls are enabled.
-    - Post a response and verify it appears in the feed.
-2.  **Transition to SAFE**:
-    - Simulate `airStatus` changing to `SAFE`.
-    - Verify header changes to "ENVIRONMENT SAFE ✓".
-    - Verify response history remains visible.
-    - Verify response controls (chips and text box) are disabled.
-    - Verify `sendResponse` rejects any attempts with the new error message.
-3.  **CLEARED Incident**:
-    - Verify that even if the incident is marked `CLEARED` in Firestore, the history is still visible but responses are blocked.
+1.  **Staff Response Identification**:
+    - Trigger a staff response from the `CriticalAlertScreen`.
+    - Navigate to `HistoryScreen`.
+    - Verify the entry has a person icon, "Staff Response" label, and a distinct background color.
+    - Verify the staff name is extracted and displayed above the message.
+2.  **System Log Consistency**:
+    - Verify that "Air status changed" or "Ventilation Activated" logs still use their standard icons (Info, Warning, etc.) and white/surface backgrounds.
+3.  **Filter Verification**:
+    - Ensure staff responses still appear under the "All" and relevant filters if applicable.

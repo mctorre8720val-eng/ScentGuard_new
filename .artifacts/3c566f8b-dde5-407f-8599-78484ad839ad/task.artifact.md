@@ -1,9 +1,15 @@
-- `[ ]` Research incident creation and clearing logic
-- `[ ]` Update `ActionViewModel.kt`:
-    - `[ ]` Modify `startRealTimeIncidentListener` to fetch latest incident regardless of status
-    - `[ ]` Implement robust `sendResponse` validation with new error messages
-- `[ ]` Update `CriticalAlertScreen.kt`:
-    - `[ ]` Implement `canRespond` logic
-    - `[ ]` Update UI components (Header, Metrics, Recommendation, Input) based on `canRespond` and `airStatus`
-- `[ ]` Verify build with `./gradlew app:assembleDebug`
-- `[ ]` Manual verification of DANGER -> SAFE transition states
+- `[x]` Research incident creation and clearing logic
+- `[x]` Update `ActionViewModel.kt`:
+    - `[x]` Modify `startRealTimeIncidentListener` to fetch latest incident regardless of status
+    - `[x]` Implement robust `sendResponse` validation with new error messages
+- `[x]` Update `CriticalAlertScreen.kt`:
+    - `[x]` Implement `canRespond` logic
+    - `[x]` Update UI components (Header, Metrics, Recommendation, Input) based on `canRespond` and `airStatus`
+- `[x]` Verify build with `./gradlew app:assembleDebug`
+- `[x]` Manual verification of DANGER -> SAFE transition states
+- `[x]` Update `HistoryScreen.kt` for Staff Response distinction:
+    - `[x]` Detect `STAFF_UPDATE` event type
+    - `[x]` Implement `Icons.Outlined.Person` and "Staff Response" label
+    - `[x]` Apply `primaryContainer` background for staff logs
+    - `[x]` Parse `Name: Message` description format
+- `[x]` Verify build with `./gradlew app:assembleDebug`
