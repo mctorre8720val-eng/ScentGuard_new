@@ -1,15 +1,9 @@
-- `[x]` Research incident creation and clearing logic
-- `[x]` Update `ActionViewModel.kt`:
-    - `[x]` Modify `startRealTimeIncidentListener` to fetch latest incident regardless of status
-    - `[x]` Implement robust `sendResponse` validation with new error messages
-- `[x]` Update `CriticalAlertScreen.kt`:
-    - `[x]` Implement `canRespond` logic
-    - `[x]` Update UI components (Header, Metrics, Recommendation, Input) based on `canRespond` and `airStatus`
-- `[x]` Verify build with `./gradlew app:assembleDebug`
-- `[x]` Manual verification of DANGER -> SAFE transition states
-- `[x]` Update `HistoryScreen.kt` for Staff Response distinction:
-    - `[x]` Detect `STAFF_UPDATE` event type
-    - `[x]` Implement `Icons.Outlined.Person` and "Staff Response" label
-    - `[x]` Apply `primaryContainer` background for staff logs
-    - `[x]` Parse `Name: Message` description format
-- `[x]` Verify build with `./gradlew app:assembleDebug`
+- [x] Research/Create Firmware file directory
+- [x] Integrate 2-channel relay logic into ESP32 firmware
+    - [x] Define pins for Fan (23) and Pump (25)
+    - [x] Implement Active LOW control functions
+    - [x] Implement state transition logic (DANGER -> SAFE)
+    - [x] Implement non-blocking sanitation timer
+    - [x] Implement safety interruption (WARN/DANGER stops pump)
+- [x] Verify firmware logic and pin safety
+- [x] Create walkthrough for firmware changes

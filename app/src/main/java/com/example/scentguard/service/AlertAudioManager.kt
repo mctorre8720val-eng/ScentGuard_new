@@ -15,6 +15,7 @@ class AlertAudioManager(private val context: Context) {
      * Starts playing the specified alarm sound in a loop.
      * If the same sound is already playing, it does nothing.
      */
+    @Synchronized
     fun startAlarm(@RawRes resId: Int) {
         if (mediaPlayer?.isPlaying == true && currentResId == resId) {
             Log.d(TAG, "Alarm already playing: $resId")
@@ -44,6 +45,7 @@ class AlertAudioManager(private val context: Context) {
     /**
      * Plays a one-shot preview of the sound.
      */
+    @Synchronized
     fun startPreview(@RawRes resId: Int, onCompletion: () -> Unit = {}) {
         stopAlarm()
 
@@ -72,6 +74,7 @@ class AlertAudioManager(private val context: Context) {
     /**
      * Stops and releases the current MediaPlayer.
      */
+    @Synchronized
     fun stopAlarm() {
         try {
             mediaPlayer?.let {

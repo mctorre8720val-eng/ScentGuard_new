@@ -1,0 +1,3 @@
+- [x] Implement thread safety in `AlertAudioManager.kt`
+- [x] Fix listener leak and silence notification in `ScentGuardWatcherService.kt`
+- [x] Verify changes through build and manual review of logic

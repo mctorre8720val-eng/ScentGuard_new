@@ -4,7 +4,6 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -74,6 +73,9 @@ class ScentGuardWatcherService : Service() {
     }
 
     private fun startMonitoring(restaurantId: String) {
+        // Prevent listener leaks if startMonitoring is called multiple times
+        listenerRegistration?.remove()
+        
         createNotificationChannels()
         val notification = createPersistentNotification()
         
@@ -230,9 +232,6 @@ class ScentGuardWatcherService : Service() {
         }
         val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
         
-        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: 
-                       RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
         val message = "Hazardous conditions: $ppm ppm, \${String.format(java.util.Locale.getDefault(), \"%.1f\", temp)}°C. Check storage immediately."
 
         val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
@@ -241,7 +240,6 @@ class ScentGuardWatcherService : Service() {
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setSound(soundUri)
             .setVibrate(longArrayOf(0, 500, 200, 500, 200, 1000))
             .setFullScreenIntent(pendingIntent, true)
             .addAction(R.drawable.ic_scentguard_logo_vector, "Stop Alarm", stopPendingIntent)
