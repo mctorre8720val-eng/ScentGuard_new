@@ -12,10 +12,8 @@ import com.example.scentguard.data.repository.AuthRepository
 import com.example.scentguard.data.repository.HistoryRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainViewModel(
     application: Application,
@@ -54,11 +52,21 @@ class MainViewModel(
         loadLocalOnboardingStatus()
         observeLiveRestaurantData()
         observeRecentActivity()
+        startSignalStatusTicker()
         
         // Attempt to restore session if firebase user exists but session is null
         if (authRepository.currentUser != null && authRepository.userSession.value == null) {
             viewModelScope.launch {
                 authRepository.restoreSession()
+            }
+        }
+    }
+
+    private fun startSignalStatusTicker() {
+        viewModelScope.launch {
+            while (isActive) {
+                updateSignalStatus(_liveRestaurantData.value)
+                delay(5000) // Recalculate every 5 seconds
             }
         }
     }
@@ -112,8 +120,8 @@ class MainViewModel(
 
         val diffMs = currentTime - lastSeen.time
         _signalStatus.value = when {
-            diffMs < 45000 -> "Active"      // Increased to 45s for better tolerance
-            diffMs < 150000 -> "Weak"       // 2.5 minutes
+            diffMs < 10000 -> "Active"      // 10s for Active (2 heartbeats)
+            diffMs < 15000 -> "Weak"       // 15s for Weak
             else -> "Offline"
         }
     }

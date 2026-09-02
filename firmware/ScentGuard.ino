@@ -34,7 +34,7 @@
 // 2. TIMING & PINS
 // =====================================================
 
-#define TELEMETRY_INTERVAL 10000UL
+#define TELEMETRY_INTERVAL 5000UL
 #define CONFIG_INTERVAL 5000UL
 #define HISTORY_INTERVAL 60000UL // 1 Minute (TEST ONLY)
 #define SANITATION_DURATION 60000UL
@@ -401,7 +401,7 @@ void loop() {
 // 2. TIMING & PINS
 // =====================================================
 
-#define TELEMETRY_INTERVAL 10000UL
+#define TELEMETRY_INTERVAL 5000UL
 #define CONFIG_INTERVAL 5000UL
 #define HISTORY_INTERVAL 60000UL // 1 Minute (TEST ONLY)
 #define SANITATION_DURATION 60000UL

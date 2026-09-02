@@ -1,3 +1,6 @@
-- [x] Implement thread safety in `AlertAudioManager.kt`
-- [x] Fix listener leak and silence notification in `ScentGuardWatcherService.kt`
-- [x] Verify changes through build and manual review of logic
+- [x] Update ESP32 firmware heartbeat interval to 5s in `ScentGuard.ino`
+- [x] Increase Android check frequency and reduce timeout in `MainViewModel.kt`
+- [x] Update background safety ticker in `ScentGuardWatcherService.kt`
+- [x] Update offline banner threshold in `CriticalAlertScreen.kt`
+- [x] Verify cancellation and single-ticker lifecycle management
+- [x] Final verification of 10-15s detection window

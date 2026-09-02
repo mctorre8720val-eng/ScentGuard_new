@@ -127,7 +127,7 @@ fun CriticalAlertContent(
 ) {
     val scrollState = rememberLazyListState()
     val lastSeen = restaurant.lastSeen?.toDate()?.time ?: 0L
-    val isStale = (System.currentTimeMillis() - lastSeen) > 150000 // 2.5 minutes
+    val isStale = (System.currentTimeMillis() - lastSeen) > 15000 // 15 seconds
     
     val hasResponded = activeIncident?.actions?.any { it.isResponse } == true
 

@@ -17,11 +17,8 @@ import com.example.scentguard.data.model.HistoryType
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 class ScentGuardWatcherService : Service() {
 
@@ -29,6 +26,8 @@ class ScentGuardWatcherService : Service() {
     private var listenerRegistration: ListenerRegistration? = null
     private var lastKnownAirStatus: String? = null
     private var lastKnownFanStatus: String? = null
+    private var latestLastSeen: Timestamp? = null
+    private var tickerJob: Job? = null
     
     private var isAlarmAcknowledged = false
     
@@ -75,6 +74,7 @@ class ScentGuardWatcherService : Service() {
     private fun startMonitoring(restaurantId: String) {
         // Prevent listener leaks if startMonitoring is called multiple times
         listenerRegistration?.remove()
+        tickerJob?.cancel()
         
         createNotificationChannels()
         val notification = createPersistentNotification()
@@ -83,6 +83,14 @@ class ScentGuardWatcherService : Service() {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             startForeground(NOTIFICATION_ID, notification)
+        }
+
+        // Start Heartbeat Ticker
+        tickerJob = serviceScope.launch {
+            while (isActive) {
+                delay(5000) // Check every 5 seconds
+                evaluateAlarmStatus()
+            }
         }
 
         // Start Firestore Listener
@@ -100,6 +108,7 @@ class ScentGuardWatcherService : Service() {
                     val gasPpm = snapshot.getLong("currentGasPpm") ?: 0
                     val temp = snapshot.getDouble("temperature")?.toFloat() ?: 0f
                     val lastSeen = snapshot.getTimestamp("lastSeen")
+                    latestLastSeen = lastSeen
                     
                     // Dynamic thresholds from Firestore
                     val tWarn = snapshot.getLong("thresholdWarn")?.toInt() ?: 1000
@@ -107,18 +116,17 @@ class ScentGuardWatcherService : Service() {
                     val twTemp = snapshot.getDouble("tempThresholdWarn")?.toFloat() ?: 40f
                     val tdTemp = snapshot.getDouble("tempThresholdDanger")?.toFloat() ?: 50f
 
-                    // Heartbeat check: Offline status must NEVER trigger the audio alarm
-                    val isOnline = lastSeen?.let { (System.currentTimeMillis() - it.toDate().time) < 150000 } ?: false
-                    
-                    // 1. Air Status Transitions
                     val currentAirStatus = when {
                         gasPpm >= tDanger || temp >= tdTemp -> "DANGER"
                         gasPpm >= tWarn || temp >= twTemp -> "WARN"
                         else -> "SAFE"
                     }
                     
-                    if (lastKnownAirStatus != null && lastKnownAirStatus != currentAirStatus) {
-                        handleAirStatusTransition(restaurantId, lastKnownAirStatus!!, currentAirStatus, gasPpm.toInt(), temp, lastSeen)
+                    val oldStatus = lastKnownAirStatus
+                    lastKnownAirStatus = currentAirStatus
+
+                    if (oldStatus != null && oldStatus != currentAirStatus) {
+                        handleAirStatusTransition(restaurantId, oldStatus, currentAirStatus, gasPpm.toInt(), temp, lastSeen)
                         
                         // Reset acknowledgment when condition clears
                         if (currentAirStatus == "SAFE" || currentAirStatus == "WARN") {
@@ -127,16 +135,7 @@ class ScentGuardWatcherService : Service() {
                     }
 
                     // Audio Alarm Management
-                    if (isOnline && currentAirStatus == "DANGER") {
-                        // Critical + alarm not playing + not acknowledged -> start
-                        if (!isAlarmAcknowledged && alertAudioManager?.isPlaying() == false) {
-                            startAudioAlarm()
-                        }
-                    } else if (alertAudioManager?.isPlaying() == true) {
-                        // No longer critical -> stop
-                        alertAudioManager?.stopAlarm()
-                        isAlarmAcknowledged = false // Reset for next time
-                    }
+                    evaluateAlarmStatus()
                     
                     // 2. Fan Status Transitions
                     if (lastKnownFanStatus != null && lastKnownFanStatus != fanStatus) {
@@ -147,6 +146,22 @@ class ScentGuardWatcherService : Service() {
                     lastKnownFanStatus = fanStatus
                 }
             }
+    }
+
+    private fun evaluateAlarmStatus() {
+        val isOnline = latestLastSeen?.let { (System.currentTimeMillis() - it.toDate().time) < 15000 } ?: false
+        val currentAirStatus = lastKnownAirStatus
+        
+        if (isOnline && currentAirStatus == "DANGER") {
+            // Critical + alarm not playing + not acknowledged -> start
+            if (!isAlarmAcknowledged && alertAudioManager?.isPlaying() == false) {
+                startAudioAlarm()
+            }
+        } else if (alertAudioManager?.isPlaying() == true) {
+            // No longer critical or device went offline -> stop
+            alertAudioManager?.stopAlarm()
+            isAlarmAcknowledged = false // Reset for next time
+        }
     }
 
     private fun handleAirStatusTransition(rid: String, old: String, new: String, ppm: Int, temp: Float, ts: Timestamp?) {
@@ -288,6 +303,7 @@ class ScentGuardWatcherService : Service() {
 
     override fun onDestroy() {
         listenerRegistration?.remove()
+        tickerJob?.cancel()
         super.onDestroy()
     }
 }
