@@ -43,6 +43,8 @@ fun DevicesScreen(
     val user = (userProfileResource as? Resource.Success)?.data
     
     val chartState by reportViewModel.chartState.collectAsState()
+    val signalStatus by mainViewModel.signalStatus.collectAsState()
+    val liveData by mainViewModel.liveRestaurantData.collectAsState()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -102,11 +104,20 @@ fun DevicesScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     // ESP32 Device Status Card
-                    DeviceStatusCard()
+                    DeviceStatusCard(signalStatus)
 
-                    if (user?.role == "Manager") {
+                    if (user?.role?.uppercase() == "MANAGER") {
                         Spacer(modifier = Modifier.height(24.dp))
-                        ScentGuardFanControl()
+                        ScentGuardFanControl(
+                            initialMode = when(liveData?.fanMode?.uppercase()) {
+                                "ON" -> com.example.scentguard.ui.components.FanMode.ON
+                                "OFF" -> com.example.scentguard.ui.components.FanMode.OFF
+                                else -> com.example.scentguard.ui.components.FanMode.AUTO
+                            },
+                            onModeChange = { mode -> 
+                                mainViewModel.updateFanMode(mode.name)
+                            }
+                        )
                     }
                     
                     Spacer(modifier = Modifier.height(32.dp))
@@ -139,7 +150,7 @@ fun DevicesScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // Device Info Section
-                    DeviceInfoList()
+                    DeviceInfoList(liveData)
 
                     Spacer(modifier = Modifier.height(120.dp))
                 }
@@ -162,7 +173,14 @@ fun DevicesScreen(
 }
 
 @Composable
-fun DeviceStatusCard() {
+fun DeviceStatusCard(signalStatus: String) {
+    val isOnline = signalStatus == "Active" || signalStatus == "Weak"
+    val statusColor = when(signalStatus) {
+        "Active" -> Color(0xFF34C759)
+        "Weak" -> Color(0xFFFF9500)
+        else -> MaterialTheme.colorScheme.error
+    }
+
     ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
@@ -181,7 +199,7 @@ fun DeviceStatusCard() {
                     Icon(
                         imageVector = Icons.Outlined.Router, 
                         contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary, 
+                        tint = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), 
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -195,10 +213,10 @@ fun DeviceStatusCard() {
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF34C759), CircleShape))
+                    Box(modifier = Modifier.size(8.dp).background(statusColor, CircleShape))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Hardware Live", 
+                        text = if (isOnline) "Hardware Live" else "Hardware Offline", 
                         style = MaterialTheme.typography.labelSmall, 
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold
@@ -214,7 +232,11 @@ fun DeviceStatusCard() {
 }
 
 @Composable
-fun DeviceInfoList() {
+fun DeviceInfoList(restaurant: com.example.scentguard.data.model.Restaurant?) {
+    val lastSync = restaurant?.lastSeen?.toDate()?.let {
+        java.text.SimpleDateFormat("hh:mm:ss a", java.util.Locale.getDefault()).format(it)
+    } ?: "Never"
+
     ScentGuardCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = 8.dp
@@ -226,7 +248,7 @@ fun DeviceInfoList() {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
             DeviceInfoItem("Firmware", "v1.2.0-stable", Icons.Outlined.Build)
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
-            DeviceInfoItem("Last Sync", "Just now", Icons.Outlined.Update)
+            DeviceInfoItem("Last Sync", lastSync, Icons.Outlined.Update)
         }
     }
 }

@@ -44,6 +44,9 @@ fun SettingsScreen(
     val userProfileResource by mainViewModel.userProfile.collectAsState()
     val user = (userProfileResource as? Resource.Success)?.data
     val liveData by mainViewModel.liveRestaurantData.collectAsState()
+    val signalStatus by mainViewModel.signalStatus.collectAsState()
+    
+    val isOnline = signalStatus == "Active" || signalStatus == "Weak"
     
     val themeMode by viewModel.themeMode.collectAsState()
     val gasAlerts by viewModel.gasAlertsEnabled.collectAsState()
@@ -56,6 +59,21 @@ fun SettingsScreen(
 
     val scrollState = rememberScrollState()
     val isNavVisible = scrollState.isScrollingUp()
+
+    val lastSyncText = remember(liveData?.lastSeen) {
+        val lastSeen = liveData?.lastSeen?.toDate()
+        if (lastSeen == null) {
+            "Not synced yet"
+        } else {
+            val now = System.currentTimeMillis()
+            val diff = now - lastSeen.time
+            if (diff < 60000) { // Less than a minute
+                "Just now"
+            } else {
+                java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(lastSeen)
+            }
+        }
+    }
 
     if (showThemeDialog) {
         AlertDialog(
@@ -170,6 +188,7 @@ fun SettingsScreen(
                         ThresholdConfigCard(
                             restaurantId = user.restaurantId,
                             isManager = user.role.uppercase() == "MANAGER",
+                            isOnline = isOnline,
                             liveData = liveData,
                             viewModel = viewModel
                         )
@@ -181,7 +200,7 @@ fun SettingsScreen(
                     SettingsCard {
                         ActionItem(
                             label = "Calibration",
-                            description = "Last sync: 15d ago",
+                            description = "Last sync: $lastSyncText",
                             icon = Icons.Outlined.SettingsSuggest,
                             onClick = { }
                         )
@@ -336,17 +355,53 @@ fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit) {
 fun ThresholdConfigCard(
     restaurantId: String,
     isManager: Boolean,
+    isOnline: Boolean,
     liveData: com.example.scentguard.data.model.Restaurant?,
     viewModel: SettingsViewModel
 ) {
-    var warnVal by remember(liveData) { mutableStateOf((liveData?.thresholdWarn ?: 1000).toString()) }
-    var dangerVal by remember(liveData) { mutableStateOf((liveData?.thresholdDanger ?: 1500).toString()) }
+    // Key by restaurantId to preserve state across heartbeats
+    var warnVal by remember(restaurantId) { 
+        mutableStateOf((liveData?.thresholdWarn ?: com.example.scentguard.data.model.Restaurant.DEFAULT_THRESHOLD_WARN).toString()) 
+    }
+    var dangerVal by remember(restaurantId) { 
+        mutableStateOf((liveData?.thresholdDanger ?: com.example.scentguard.data.model.Restaurant.DEFAULT_THRESHOLD_DANGER).toString()) 
+    }
     
     val updateState by viewModel.thresholdUpdateState.collectAsState()
     
+    // Sync only when actual thresholds change in Firestore (e.g. successful save or external change)
+    // and NOT when we are currently loading/submitting to avoid jumping text
+    LaunchedEffect(liveData?.thresholdWarn, liveData?.thresholdDanger) {
+        if (updateState !is Resource.Loading) {
+            liveData?.thresholdWarn?.let { warnVal = it.toString() }
+            liveData?.thresholdDanger?.let { dangerVal = it.toString() }
+        }
+    }
+    
     SettingsCard {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text("Gas Sensitivity (PPM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Gas Sensitivity (PPM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (!isOnline) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.WifiOff, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Hardware Offline", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -355,7 +410,7 @@ fun ThresholdConfigCard(
                     onValueChange = { if (it.all { char -> char.isDigit() }) warnVal = it },
                     label = { Text("WARN") },
                     modifier = Modifier.weight(1f),
-                    enabled = isManager && updateState !is Resource.Loading,
+                    enabled = isManager && isOnline && updateState !is Resource.Loading,
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -368,7 +423,7 @@ fun ThresholdConfigCard(
                     onValueChange = { if (it.all { char -> char.isDigit() }) dangerVal = it },
                     label = { Text("DANGER") },
                     modifier = Modifier.weight(1f),
-                    enabled = isManager && updateState !is Resource.Loading,
+                    enabled = isManager && isOnline && updateState !is Resource.Loading,
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -389,17 +444,24 @@ fun ThresholdConfigCard(
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = isValid && updateState !is Resource.Loading,
+                    enabled = isValid && isOnline && updateState !is Resource.Loading,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (updateState is Resource.Loading) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Apply Configuration", fontWeight = FontWeight.Bold)
+                        Text(if (isOnline) "Apply Configuration" else "Hardware Offline", fontWeight = FontWeight.Bold)
                     }
                 }
                 
-                if (!isValid) {
+                if (!isOnline) {
+                    Text(
+                        "Configuration is unavailable while the hardware is offline.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                    )
+                } else if (!isValid) {
                     Text(
                         "Warning: WARN threshold must be less than DANGER.",
                         color = MaterialTheme.colorScheme.error,

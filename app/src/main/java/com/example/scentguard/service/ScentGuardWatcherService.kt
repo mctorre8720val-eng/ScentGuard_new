@@ -102,8 +102,8 @@ class ScentGuardWatcherService : Service() {
                     val lastSeen = snapshot.getTimestamp("lastSeen")
                     
                     // Dynamic thresholds from Firestore
-                    val tWarn = snapshot.getLong("thresholdWarn")?.toInt() ?: 1000
-                    val tDanger = snapshot.getLong("thresholdDanger")?.toInt() ?: 1500
+                    val tWarn = snapshot.getLong("thresholdWarn")?.toInt() ?: com.example.scentguard.data.model.Restaurant.DEFAULT_THRESHOLD_WARN
+                    val tDanger = snapshot.getLong("thresholdDanger")?.toInt() ?: com.example.scentguard.data.model.Restaurant.DEFAULT_THRESHOLD_DANGER
                     val twTemp = snapshot.getDouble("tempThresholdWarn")?.toFloat() ?: 40f
                     val tdTemp = snapshot.getDouble("tempThresholdDanger")?.toFloat() ?: 50f
 

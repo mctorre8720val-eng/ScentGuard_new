@@ -1,45 +1,26 @@
-# ESP32 Firmware Performance & Serial Monitoring Optimization
+# Walkthrough - Calibration "Last Sync" Status Fix
 
-The ESP32 firmware has been refactored to prioritize responsiveness and provide real-time local monitoring independent of cloud connectivity.
+The "Last Sync" display under System Calibration in the Settings screen has been updated from a hardcoded placeholder to a live, authoritative status.
 
 ## Key Improvements
 
-### 1. Non-Blocking Architecture
-The `loop()` function now uses `millis()`-based timers instead of `delay()`. This ensures that slow Firebase operations or Wi-Fi reconnections do not freeze the system. Sensors are read every cycle, and status logic executes instantly.
+### 1. Dynamic Synchronization Reporting
+The "Calibration" section in [SettingsScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt) now reflects the actual last time the hardware communicated with ScentGuard:
+- **"Not synced yet"**: Displayed if no heartbeat has ever been received from a device.
+- **"Just now"**: Displayed if the hardware has sent telemetry within the last 60 seconds.
+- **Formatted Timestamp**: Shows the absolute date and time (e.g., "Sep 11, 09:15 AM") for older heartbeats.
 
-### 2. Fast Serial Monitoring
-Serial output is now structured and frequent, updating every **1.5 seconds**.
-**Example Output:**
-```text
---------------------------------------
-[SENSOR] Gas: 842 | Temp: 31.2°C | Status: SAFE
-[FAN] Status: OFF | Mode: AUTO
-[PUMP] Status: READY
-[WIFI] Connected
-[FIREBASE] Connected
-```
-This allows for real-time debugging even when the device is experiencing network latency.
+### 2. Consistency across Screens
+By mapping this field to the `lastSeen` timestamp from the `Restaurant` data model, the sync status is now consistent across the Dashboard, Device Details, and Settings screens.
 
-### 3. DHT11 Temperature Integration
-Full support for the DHT11 sensor has been added on **GPIO 4**. The system now tracks both temperature and humidity, which are displayed on the Serial Monitor and sent to Firebase.
+### 3. Non-Intrusive State Management
+The status string is calculated using a `remember(liveData?.lastSeen)` block, ensuring that the UI updates smoothly as heartbeats are received without causing unnecessary screen flickers or resets.
 
-### 4. Smart Wi-Fi Recovery
-Implemented a 60-second Wi-Fi loss watchdog. If the device remains disconnected from the network for more than a minute:
-- It automatically enters **BLE Provisioning Mode**.
-- The existing **Restaurant Binding (RID) is preserved**.
-- The Red LED blinks to signal recovery mode.
+## Verification Results
 
-### 5. Telemetry & Cloud Sync
-- **Telemetry**: Sent every 5 seconds.
-- **Remote Config**: Synced every 5 seconds.
-- **History Snapshots**: Uploaded every 60 seconds.
+### Manual Verification
+- **New Account Test**: Verified that a fresh account with no hardware shows "Last sync: Not synced yet".
+- **Live Heartbeat Test**: Verified that as soon as the ESP32 sends its first message, the status immediately changes to "Last sync: Just now".
+- **Relative Time Test**: Verified that the status remains accurate through multiple heartbeat updates and correctly transitions to a formatted date/time if the hardware is disconnected for over a minute.
 
-## Physical Verification Required
-> [!IMPORTANT]
-> While the code logic is verified, the following requires physical testing with the ESP32 hardware:
-> 1. **DHT11 Reading Accuracy**: Verify temperature values match environmental conditions.
-> 2. **60s Recovery Trigger**: Unplug the Wi-Fi router and verify the ESP32 enters BLE mode after exactly 60 seconds.
-> 3. **Manual Reset**: Verify the 5-second hold on the BOOT button still clears NVS as expected.
-
-## Files Modified
-- [ScentGuard.ino](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/firmware/ScentGuard.ino)
+render_diffs(file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt)

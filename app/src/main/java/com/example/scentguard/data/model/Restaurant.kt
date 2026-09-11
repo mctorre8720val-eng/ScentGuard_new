@@ -25,4 +25,9 @@ data class Restaurant(
     val lastSeen: Timestamp? = null,
     val fanMode: String = "AUTO", // "ON", "OFF", "AUTO"
     val createdAt: Timestamp? = null
-)
+) {
+    companion object {
+        const val DEFAULT_THRESHOLD_WARN = 1000
+        const val DEFAULT_THRESHOLD_DANGER = 1500
+    }
+}

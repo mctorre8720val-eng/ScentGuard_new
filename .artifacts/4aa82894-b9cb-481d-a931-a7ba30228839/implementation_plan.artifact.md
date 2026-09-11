@@ -1,34 +1,29 @@
-# Implementation Plan - ESP32 Performance & Serial Monitoring Optimization
+# Implementation Plan - Fix Hardcoded Calibration "Last Sync"
 
-This plan focuses on making the ESP32 firmware non-blocking, ensuring fast local serial monitoring, and improving Firebase telemetry responsiveness.
+This plan removes the hardcoded "Last sync: 15d ago" string from the Settings screen and replaces it with the actual latest synchronization timestamp from the hardware.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Non-Blocking Architecture**: I will refactor the `loop()` function to remove `delay()` calls and use `millis()` for timing. This ensures that a slow Firebase connection won't freeze the Serial Monitor or sensor readings.
+> [!NOTE]
+> **Data Mapping**: I will use the `lastSeen` timestamp from the `Restaurant` model to represent "Last Sync". This is consistent with how "Last Sync" is displayed on the Device Details screen and accurately reflects the last time the ESP32 communicated with the cloud to send telemetry and receive configuration updates.
 >
-> **DHT11 Integration**: I will add the missing DHT11 temperature sensor logic (using GPIO 4) to match the project requirements.
->
-> **Fast Serial Output**: Serial Monitor updates will happen every 1.5 seconds, independent of Firebase sync.
+> **Display Logic**: If the hardware has never connected (timestamp is null), the UI will display "Not synced yet". Otherwise, it will show a formatted date/time of the last successful sync.
 
 ## Proposed Changes
 
-### [ESP32 Firmware]
+### [UI Layer]
 
-#### [MODIFY] [ScentGuard.ino](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/firmware/ScentGuard.ino)
-- **Non-Blocking Logic**: Introduce `millis()` timers for:
-    - Sensor reading & Serial output (1.5s interval).
-    - Firebase Telemetry (5s interval).
-    - Remote Config Sync (5s interval).
-- **DHT11 Support**: Add `#include "DHT.h"`, define `DHTPIN 4`, and implement temperature/humidity reading.
-- **Improved Serial Monitor**: Format the output to be clear and professional, showing Gas, Temp, Fan Status, Wi-Fi status, and Firebase status.
-- **Wi-Fi Recovery**: Implement a 60-second timeout that triggers BLE provisioning mode if the device cannot reconnect to Wi-Fi.
-- **Firebase Safety**: Ensure Firebase operations don't block the main loop by using shorter timeouts or checking `Firebase.ready()` correctly.
+#### [MODIFY] [SettingsScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt)
+- Replace the hardcoded `description = "Last sync: 15d ago"` in the `ActionItem` for "Calibration".
+- Implement a logic to format `liveData?.lastSeen` into a human-readable string.
+- If `lastSeen` is null, show "Not synced yet".
+- If `lastSeen` is within the last 60 seconds, show "Just now".
+- Otherwise, show a formatted date (e.g., "Sep 11, 09:15 AM").
 
 ## Verification Plan
 
-### Manual Verification (Serial Monitor)
-1.  **Observe Timing**: Verify that sensor readings (Gas/Temp) print to Serial every 1.5 seconds even if Wi-Fi is disconnected.
-2.  **Telemetry Sync**: Verify that "Telemetry OK" appears every 5 seconds when Wi-Fi is active.
-3.  **Wi-Fi Loss Recovery**: Unplug the router, wait 60 seconds, and verify the ESP32 enters BLE mode (Red LED blinking).
-4.  **Android Sync**: Verify that the "Active" status and sensor values on the Dashboard update within 3-5 seconds of the hardware reading change.
+### Manual Verification
+1.  **Never Connected**: Log into a new restaurant where no device has been provisioned. Navigate to Settings -> System and verify it says "Not synced yet".
+2.  **Live Update**: Connect the ESP32 and wait for the first heartbeat. Verify the description updates to "Just now".
+3.  **Delayed Sync**: Disconnect the ESP32 and wait for a few minutes. Verify the description reflects the last time it was seen (e.g., "2 minutes ago" or the absolute time).
+4.  **Recomposition**: Navigate away and back to verify the value persists (via `liveData` state).

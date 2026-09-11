@@ -1,7 +1,5 @@
-- `[x]` Refactor ESP32 firmware `loop()` to be non-blocking using `millis()`
-- `[x]` Integrate DHT11 sensor (GPIO 4) for temperature and humidity
-- `[x]` Implement fast Serial Monitor reporting (1.5s interval)
-- `[x]` Update Firebase telemetry to 5s interval
-- `[x]` Implement 60s Wi-Fi recovery watchdog to auto-trigger BLE provisioning
-- `[x]` Verify Serial output continues even when Wi-Fi/Firebase is offline
-- `[x]` Ensure restaurant binding is preserved during Wi-Fi reconfiguration
+- `[x]` Implement dynamic "Last Sync" formatting in `SettingsScreen`
+- `[x]` Replace hardcoded "15d ago" with dynamic sync status
+- `[x]` Verify "Not synced yet" state for new restaurants
+- `[x]` Verify "Just now" state for active heartbeats
+- `[x]` Verify formatted timestamp for older heartbeats

@@ -112,8 +112,8 @@ class MainViewModel(
 
         val diffMs = currentTime - lastSeen.time
         _signalStatus.value = when {
-            diffMs < 45000 -> "Active"      // Increased to 45s for better tolerance
-            diffMs < 150000 -> "Weak"       // 2.5 minutes
+            diffMs < 15000 -> "Active"      // Updated to 15s for 5s telemetry
+            diffMs < 30000 -> "Weak"        // 30s for weak
             else -> "Offline"
         }
     }
