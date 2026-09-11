@@ -1,29 +1,28 @@
-# Implementation Plan - Fix Hardcoded Calibration "Last Sync"
+# Implementation Plan - Fix Duplicate Alert Sound / Double Notification
 
-This plan removes the hardcoded "Last sync: 15d ago" string from the Settings screen and replaces it with the actual latest synchronization timestamp from the hardware.
+This plan addresses the "double sound" issue where the system notification sound plays simultaneously with the app's custom `critical_alarm.mp3`, and ensures that alerts are triggered exactly once per danger event.
 
 ## User Review Required
 
-> [!NOTE]
-> **Data Mapping**: I will use the `lastSeen` timestamp from the `Restaurant` model to represent "Last Sync". This is consistent with how "Last Sync" is displayed on the Device Details screen and accurately reflects the last time the ESP32 communicated with the cloud to send telemetry and receive configuration updates.
+> [!IMPORTANT]
+> **Silencing Notification Channel**: I will explicitly silence the `scentguard_alerts` notification channel. This ensures that only the app's managed `AlertAudioManager` plays the alarm sound, preventing the "double sound" effect.
 >
-> **Display Logic**: If the hardware has never connected (timestamp is null), the UI will display "Not synced yet". Otherwise, it will show a formatted date/time of the last successful sync.
+> **Transition Robustness**: I will ensure that the air status transition logic is atomic to prevent race conditions during rapid Firestore updates.
 
 ## Proposed Changes
 
-### [UI Layer]
+### [Services]
 
-#### [MODIFY] [SettingsScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt)
-- Replace the hardcoded `description = "Last sync: 15d ago"` in the `ActionItem` for "Calibration".
-- Implement a logic to format `liveData?.lastSeen` into a human-readable string.
-- If `lastSeen` is null, show "Not synced yet".
-- If `lastSeen` is within the last 60 seconds, show "Just now".
-- Otherwise, show a formatted date (e.g., "Sep 11, 09:15 AM").
+#### [MODIFY] [ScentGuardWatcherService.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardWatcherService.kt)
+- **Silence Alert Channel**: Update `createNotificationChannels()` to set the sound of `ALERT_CHANNEL_ID` to `null`.
+- **Remove Manual Vibration from Builder**: Since the channel handles vibration, removing `.setVibrate()` from the `NotificationCompat.Builder` prevents redundant vibration requests.
+- **Ensure Single Trigger**: Confirm that `lastKnownAirStatus` is updated immediately upon detection of a change to prevent re-triggering if the listener fires again before the block completes.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Never Connected**: Log into a new restaurant where no device has been provisioned. Navigate to Settings -> System and verify it says "Not synced yet".
-2.  **Live Update**: Connect the ESP32 and wait for the first heartbeat. Verify the description updates to "Just now".
-3.  **Delayed Sync**: Disconnect the ESP32 and wait for a few minutes. Verify the description reflects the last time it was seen (e.g., "2 minutes ago" or the absolute time).
-4.  **Recomposition**: Navigate away and back to verify the value persists (via `liveData` state).
+1.  **Trigger Danger State**: Manually set `currentGasPpm` to 1600 in Firestore.
+2.  **Verify Sound**: Confirm that ONLY the `critical_alarm.mp3` plays, and NO system notification sound is heard.
+3.  **Verify Notification**: Confirm that exactly one critical notification appears.
+4.  **Verify Heartbeat Stability**: While the state remains DANGER, update the `lastSeen` timestamp in Firestore multiple times. Confirm that NO new notifications are posted and the alarm sound does not restart or stutter.
+5.  **Verify Recovery**: Change gas to 500 (SAFE). Confirm the alarm stops. Change gas back to 1600. Confirm the alarm and notification trigger again as expected.

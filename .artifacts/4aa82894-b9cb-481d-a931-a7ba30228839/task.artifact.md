@@ -1,5 +1,7 @@
-- `[x]` Implement dynamic "Last Sync" formatting in `SettingsScreen`
-- `[x]` Replace hardcoded "15d ago" with dynamic sync status
-- `[x]` Verify "Not synced yet" state for new restaurants
-- `[x]` Verify "Just now" state for active heartbeats
-- `[x]` Verify formatted timestamp for older heartbeats
+- `[x]` Update `ScentGuardWatcherService` to use a silent alert notification channel
+    - `[x]` Define new `ALERT_CHANNEL_ID_V2`
+    - `[x]` Set sound to `null` and importance to `HIGH`
+- `[x]` Remove manual vibration from `triggerDangerAlert` notification builder
+- `[x]` Ensure air status transition logic is atomic and non-reentrant
+- `[/]` Verify gas and temperature DANGER both trigger exactly one alert (Code verified)
+- `[/]` Verify heartbeats during DANGER do not produce duplicate sounds (Code verified)

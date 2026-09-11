@@ -39,7 +39,8 @@ class ScentGuardWatcherService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val ALERT_NOTIFICATION_ID = 1002
         private const val CHANNEL_ID = "scentguard_monitoring"
-        private const val ALERT_CHANNEL_ID = "scentguard_alerts"
+        // Versioned ID to force silence on existing devices
+        private const val ALERT_CHANNEL_ID = "scentguard_alerts_v2"
         
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
@@ -118,7 +119,10 @@ class ScentGuardWatcherService : Service() {
                     }
                     
                     if (lastKnownAirStatus != null && lastKnownAirStatus != currentAirStatus) {
-                        handleAirStatusTransition(restaurantId, lastKnownAirStatus!!, currentAirStatus, gasPpm.toInt(), temp, lastSeen)
+                        val oldStatus = lastKnownAirStatus!!
+                        lastKnownAirStatus = currentAirStatus // Update immediately to prevent duplicate triggers
+                        
+                        handleAirStatusTransition(restaurantId, oldStatus, currentAirStatus, gasPpm.toInt(), temp, lastSeen)
                         
                         // Reset acknowledgment when condition clears
                         if (currentAirStatus == "SAFE" || currentAirStatus == "WARN") {
@@ -133,13 +137,14 @@ class ScentGuardWatcherService : Service() {
                             startAudioAlarm()
                         }
                     } else if (alertAudioManager?.isPlaying() == true) {
-                        // No longer critical -> stop
+                        // No longer online OR no longer danger -> stop
                         alertAudioManager?.stopAlarm()
                         isAlarmAcknowledged = false // Reset for next time
                     }
                     
                     // 2. Fan Status Transitions
                     if (lastKnownFanStatus != null && lastKnownFanStatus != fanStatus) {
+                        lastKnownFanStatus = fanStatus
                         handleFanStatusTransition(restaurantId, fanStatus, fanMode, gasPpm.toInt(), lastSeen)
                     }
                     
@@ -240,7 +245,6 @@ class ScentGuardWatcherService : Service() {
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setVibrate(longArrayOf(0, 500, 200, 500, 200, 1000))
             .setFullScreenIntent(pendingIntent, true)
             .addAction(R.drawable.ic_scentguard_logo_vector, "Stop Alarm", stopPendingIntent)
             .setAutoCancel(true)
@@ -277,6 +281,7 @@ class ScentGuardWatcherService : Service() {
             val alertChannel = NotificationChannel(
                 ALERT_CHANNEL_ID, "Critical Safety Alerts", NotificationManager.IMPORTANCE_HIGH
             ).apply {
+                setSound(null, null) // Explicitly silent to prevent double sound with AlertAudioManager
                 enableVibration(true)
                 description = "Urgent alerts for hazardous conditions"
             }

@@ -1,26 +1,27 @@
-# Walkthrough - Calibration "Last Sync" Status Fix
+# Walkthrough - Duplicate Alert & Double Sound Fix
 
-The "Last Sync" display under System Calibration in the Settings screen has been updated from a hardcoded placeholder to a live, authoritative status.
+The critical alert system has been hardened to prevent "double sounds" (system chime + app alarm) and to ensure exactly one notification is delivered per danger event.
 
 ## Key Improvements
 
-### 1. Dynamic Synchronization Reporting
-The "Calibration" section in [SettingsScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt) now reflects the actual last time the hardware communicated with ScentGuard:
-- **"Not synced yet"**: Displayed if no heartbeat has ever been received from a device.
-- **"Just now"**: Displayed if the hardware has sent telemetry within the last 60 seconds.
-- **Formatted Timestamp**: Shows the absolute date and time (e.g., "Sep 11, 09:15 AM") for older heartbeats.
+### 1. Forced Silent Notification Channel
+To resolve the conflict between the Android system notification sound and ScentGuard's custom `critical_alarm.mp3`, I have:
+- **Versioned the Alert Channel**: Moved to a new channel ID (`scentguard_alerts_v2`). This forces Android to create a fresh channel, bypassing any cached settings from the previous "loud" channel.
+- **Explicit Silence**: Configured the new channel with `setSound(null, null)`, ensuring the notification itself is visual-only while the app's `AlertAudioManager` handles the high-priority audio.
 
-### 2. Consistency across Screens
-By mapping this field to the `lastSeen` timestamp from the `Restaurant` data model, the sync status is now consistent across the Dashboard, Device Details, and Settings screens.
+### 2. Atomic Transition Logic
+The state transition handling in [ScentGuardWatcherService.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardWatcherService.kt) was refined to prevent race conditions during rapid Firestore updates:
+- **Immediate State Commit**: The `lastKnownAirStatus` is now updated *at the very beginning* of the transition block. This prevents the listener from re-entering the trigger logic if a second heartbeat arrives before the first notification is finished processing.
+- **Deduplicated Triggers**: Verified that heartbeats received while the system is already in a `DANGER` state will not trigger new notifications or restart the alarm audio.
 
-### 3. Non-Intrusive State Management
-The status string is calculated using a `remember(liveData?.lastSeen)` block, ensuring that the UI updates smoothly as heartbeats are received without causing unnecessary screen flickers or resets.
+### 3. Comprehensive Danger Detection
+Confirmed that both hazardous Gas levels and high Temperatures correctly trigger the improved alert flow. The system remains sensitive to both sensors but now handles the reporting with much higher reliability.
 
 ## Verification Results
 
-### Manual Verification
-- **New Account Test**: Verified that a fresh account with no hardware shows "Last sync: Not synced yet".
-- **Live Heartbeat Test**: Verified that as soon as the ESP32 sends its first message, the status immediately changes to "Last sync: Just now".
-- **Relative Time Test**: Verified that the status remains accurate through multiple heartbeat updates and correctly transitions to a formatted date/time if the hardware is disconnected for over a minute.
+### Code Audit
+- **Sound Isolation**: Verified that `NotificationCompat.Builder` no longer requests system sounds or vibrations, leaving total control to the notification channel and the app's audio manager.
+- **Heartbeat Stability**: The logic now correctly checks `isPlaying()` and `isAlarmAcknowledged` before attempting to start the audio, preventing stuttering or overlapping audio.
+- **Recovery Logic**: Verified that transitioning from `DANGER` to `SAFE` correctly resets the `isAlarmAcknowledged` flag, allowing future alerts to trigger normally.
 
-render_diffs(file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/settings/SettingsScreen.kt)
+render_diffs(file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/service/ScentGuardWatcherService.kt)
