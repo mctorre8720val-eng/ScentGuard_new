@@ -1,8 +1,6 @@
-# Task List - Manager-only Delete Feature for System Logs
+# Task List - Fix Offline Detection Bug
 
-- [x] Modify `HistoryRepository.kt` to add delete operations
-- [x] Update `HistoryViewModel.kt` with delete logic and UI state
-- [x] Implement UI changes in `HistoryScreen.kt`
-    - [x] Add Manager-only "Delete All" button and confirmation dialog
-    - [x] Implement swipe-to-delete for log entries (Manager-only)
-- [x] Verify implementation with a successful build
+- [x] Modify `MainViewModel.kt` to add background status ticker and update thresholds
+- [x] Update `CriticalAlertScreen.kt` to use unified `signalStatus`
+- [x] Verify build and fix syntax issues
+- [x] Create walkthrough for the user

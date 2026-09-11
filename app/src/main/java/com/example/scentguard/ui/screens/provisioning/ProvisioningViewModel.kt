@@ -48,6 +48,7 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
     val wifiWarning: StateFlow<String?> = _wifiWarning.asStateFlow()
 
     private var bluetoothGatt: BluetoothGatt? = null
+    private var connectionRetryCount = 0
     private val serviceUuid = UUID.fromString("0000FF01-0000-1000-8000-00805F9B34FB")
     private val ssidCharUuid = UUID.fromString("0000FF02-0000-1000-8000-00805F9B34FB")
     private val passCharUuid = UUID.fromString("0000FF03-0000-1000-8000-00805F9B34FB")
@@ -163,23 +164,49 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
         } catch (e: Exception) {}
     }
 
-    fun connectAndProvision(device: BluetoothDevice, ssid: String, pass: String, rid: String) {
-        Log.d(tag, "Connecting to GATT for provisioning...")
+    fun connectAndProvision(device: BluetoothDevice, ssid: String, pass: String, rid: String, isRetry: Boolean = false) {
+        if (!isRetry) connectionRetryCount = 0
+        
+        Log.d(tag, "Connecting to GATT for provisioning (Retry: $isRetry)...")
         _state.value = ProvisioningState.Connecting
         
-        bluetoothGatt = device.connectGatt(getApplication(), false, object : BluetoothGattCallback() {
+        // Clean up previous attempts to avoid 133 errors
+        closeGatt()
+        
+        val gattCallback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.i(tag, "GATT connected! Discovering services...")
-                    viewModelScope.launch {
-                        delay(1000)
-                        gatt.discoverServices()
-                    }
+                    Log.i(tag, "GATT connected! Requesting MTU...")
+                    gatt.requestMtu(512)
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.w(tag, "GATT disconnected. Status: $status")
+                    
+                    // Critical: Always close the GATT handle on disconnect
+                    gatt.close()
+                    if (bluetoothGatt == gatt) bluetoothGatt = null
+
+                    // Handle transient 133 error with a single retry
+                    if (status == 133 && connectionRetryCount < 1) {
+                        connectionRetryCount++
+                        Log.w(tag, "Transient 133 error. Attempting retry $connectionRetryCount...")
+                        viewModelScope.launch {
+                            delay(1000)
+                            connectAndProvision(device, ssid, pass, rid, isRetry = true)
+                        }
+                        return
+                    }
+
                     if (_state.value !is ProvisioningState.Success && _state.value !is ProvisioningState.WifiFailed) {
                         _state.value = ProvisioningState.Error("Connection lost ($status)")
                     }
+                }
+            }
+
+            override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+                Log.d(tag, "MTU changed to $mtu. Discovering services...")
+                viewModelScope.launch {
+                    delay(600) // Small delay after MTU change for stability
+                    gatt.discoverServices()
                 }
             }
 
@@ -222,7 +249,13 @@ class ProvisioningViewModel(application: Application) : AndroidViewModel(applica
                     }
                 }
             }
-        })
+        }
+
+        bluetoothGatt = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            device.connectGatt(getApplication(), false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        } else {
+            device.connectGatt(getApplication(), false, gattCallback)
+        }
     }
 
     private fun sendCredentials(gatt: BluetoothGatt, service: BluetoothGattService, ssid: String, pass: String, rid: String) {

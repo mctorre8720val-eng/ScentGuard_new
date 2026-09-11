@@ -57,6 +57,7 @@ fun CriticalAlertScreen(
     
     val activeIncidentResource by actionViewModel.activeIncident.collectAsState()
     val liveData by actionViewModel.liveRestaurantData.collectAsState()
+    val signalStatus by mainViewModel.signalStatus.collectAsState()
     val sendState by actionViewModel.sendState.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,6 +98,7 @@ fun CriticalAlertScreen(
                         
                         CriticalAlertContent(
                             restaurant = restaurant,
+                            signalStatus = signalStatus,
                             activeIncident = incident,
                             onSendResponse = { msg -> actionViewModel.sendResponse(user, incident, msg) },
                             isSending = sendState is Resource.Loading,
@@ -120,14 +122,14 @@ fun CriticalAlertScreen(
 @Composable
 fun CriticalAlertContent(
     restaurant: Restaurant,
+    signalStatus: String,
     activeIncident: Incident?,
     onSendResponse: (String) -> Unit,
     isSending: Boolean,
     canRespond: Boolean
 ) {
     val scrollState = rememberLazyListState()
-    val lastSeen = restaurant.lastSeen?.toDate()?.time ?: 0L
-    val isStale = (System.currentTimeMillis() - lastSeen) > 150000 // 2.5 minutes
+    val isStale = signalStatus == "Offline"
     
     val hasResponded = activeIncident?.actions?.any { it.isResponse } == true
 

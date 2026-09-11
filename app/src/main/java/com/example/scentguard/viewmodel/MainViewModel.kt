@@ -13,6 +13,7 @@ import com.example.scentguard.data.repository.HistoryRepository
 import com.example.scentguard.data.repository.UserRepository
 import com.example.scentguard.utils.Resource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -54,6 +55,7 @@ class MainViewModel(
         loadLocalOnboardingStatus()
         observeLiveRestaurantData()
         observeRecentActivity()
+        startSignalStatusTicker()
         
         // Attempt to restore session if firebase user exists but session is null
         if (authRepository.currentUser != null && authRepository.userSession.value == null) {
@@ -75,6 +77,19 @@ class MainViewModel(
                     _liveRestaurantData.value = null
                     _signalStatus.value = "Offline"
                 }
+            }
+        }
+    }
+
+    /**
+     * Ticker that re-evaluates signal status every 2 seconds.
+     * This ensures the UI reflects "Offline" even if no Firestore updates occur.
+     */
+    private fun startSignalStatusTicker() {
+        viewModelScope.launch {
+            while (true) {
+                delay(2000)
+                updateSignalStatus(_liveRestaurantData.value)
             }
         }
     }
@@ -112,9 +127,9 @@ class MainViewModel(
 
         val diffMs = currentTime - lastSeen.time
         _signalStatus.value = when {
-            diffMs < 15000 -> "Active"      // Updated to 15s for 5s telemetry
-            diffMs < 30000 -> "Weak"        // 30s for weak
-            else -> "Offline"
+            diffMs < 5000 -> "Active"      // Tightened: < 5s for Active
+            diffMs < 8000 -> "Weak"        // Tightened: < 8s for Weak
+            else -> "Offline"              // > 8s for Offline (Meeting < 10s requirement)
         }
     }
 

@@ -1,60 +1,43 @@
-# Implementation Plan - Manager-only Delete Feature for System Logs
+# Implementation Plan - Fix Offline Detection Bug
 
-This plan adds administrative control over system logs, allowing Managers to delete individual entries or clear the entire log history for their restaurant.
+The goal is to fix a bug where the app fails to transition to an "Offline" state automatically when the ESP32 stops sending telemetry. The fix involves implementing an independent "Ticker" that re-evaluates the hardware connection status every 2 seconds, regardless of whether new data arrives from Firestore.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Manager-Only Restriction**: All delete actions (UI buttons and Firestore logic) will be strictly restricted to users with the `MANAGER` role.
-> **Destructive Action**: Deleting logs is permanent. A confirmation dialog will be implemented for the "Delete All" action to prevent data loss.
+> **Authoritative State**: I will tighten the "Active" and "Offline" thresholds to provide near-real-time feedback as requested:
+> - **Active**: < 5s (Green)
+> - **Weak**: 5s to 8s (Yellow)
+> - **Offline**: > 8s (Red)
+>
+> **Unified UI**: The `CriticalAlertScreen` will be updated to use this same authoritative `signalStatus` StateFlow, replacing its internal, slower (2.5 minute) stale check.
 
 ## Proposed Changes
 
-### Data & Repository
+### Business Logic
 
-#### [MODIFY] [HistoryRepository.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/repository/HistoryRepository.kt)
-- Add `deleteLogEntry(restaurantId: String, logId: String)` to delete a specific document from the `logs` sub-collection.
-- Add `deleteAllLogs(restaurantId: String)` to clear all documents in the `logs` sub-collection for the specified restaurant.
+#### [MODIFY] [MainViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/MainViewModel.kt)
+- **Signal Ticker**: Add a background coroutine in `viewModelScope` that executes every 2 seconds.
+- **Dynamic Re-evaluation**: The ticker will call `updateSignalStatus(liveRestaurantData.value)` to re-calculate `diffMs` against the current system time.
+- **Threshold Update**: Update the logic to:
+    - `diffMs < 5000` -> **Active**
+    - `diffMs < 8000` -> **Weak**
+    - Else -> **Offline**
 
-### ViewModel
+### User Interface
 
-#### [MODIFY] [HistoryViewModel.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/viewmodel/HistoryViewModel.kt)
-- Add `deleteLog(item: HistoryItem)`:
-    - Calls `HistoryRepository.deleteLogEntry`.
-    - Optimistically updates the `_historyState` by removing the deleted item from the list.
-- Add `deleteAllLogs()`:
-    - Calls `HistoryRepository.deleteAllLogs`.
-    - Resets the `_historyState` and refreshes.
-- Add `showDeleteAllDialog` state to manage the visibility of the confirmation dialog.
-
-### UI Components
-
-#### [MODIFY] [HistoryScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/history/HistoryScreen.kt)
-- **Top Bar**: Add a "Delete All" icon button in the `actions` block, visible only if `user.role == "MANAGER"`.
-- **Swipe-to-Delete**: Wrap `HistoryCard` within a `SwipeToDismissBox` (Material 3).
-    - Enable swipe-left only.
-    - Show a red background with a `Delete` icon when swiping.
-    - Trigger `viewModel.deleteLog(item)` on dismissal.
-    - Only enable swipe functionality if `user.role == "MANAGER"`.
-- **Confirmation Dialog**: Implement a `Delete All` confirmation dialog that triggers `viewModel.deleteAllLogs()`.
+#### [MODIFY] [CriticalAlertScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/alerts/CriticalAlertScreen.kt)
+- **State Injection**: Access `mainViewModel.signalStatus` to drive the "SENSOR OFFLINE" banner.
+- **Consistency**: Remove the hardcoded `150000ms` (2.5m) check and replace it with `signalStatus == "Offline"`.
 
 ## Verification Plan
 
 ### Automated Tests
-- Build and run `app:compileDebugKotlin` to ensure syntax correctness.
-- (Optional) Add unit tests for `HistoryViewModel` to verify that `deleteLog` correctly updates the state.
+- Run `app:compileDebugKotlin` to ensure no syntax errors.
 
 ### Manual Verification
-1. **Manager Role**:
-    - Log in as a Manager.
-    - Navigate to System Logs.
-    - Verify that the "Delete All" button is visible in the top bar.
-    - Swipe left on a log entry; verify it shows the delete action and removes the log upon completion.
-    - Click "Delete All"; verify the confirmation dialog appears. Confirm and verify all logs are removed.
-2. **Staff Role**:
-    - Log in as a Staff member.
-    - Navigate to System Logs.
-    - Verify that the "Delete All" button is **NOT** visible.
-    - Verify that swiping left on logs does nothing (swipe is disabled).
-3. **Security**:
-    - Verify through code that the `restaurantId` used for deletion is always taken from the authenticated user's session, preventing cross-restaurant deletion.
+1. **Active**: Plug in ESP32, verify "Active" (Green) status in Dashboard and Devices screens.
+2. **Weak Transition**: Unplug ESP32. Verify status changes to "Weak" (Yellow) within ~5 seconds without interacting with the app.
+3. **Offline Transition**: Continue waiting. Verify status changes to "Offline" (Red) within ~8 seconds without interacting with the app.
+4. **Alert Sync**: Open the Critical Alert feed during a danger event; unplug ESP32 and verify the "SENSOR OFFLINE" banner appears automatically within 8 seconds.
+5. **Recovery**: Plug ESP32 back in. Verify all screens return to "Active" automatically within a few seconds.
