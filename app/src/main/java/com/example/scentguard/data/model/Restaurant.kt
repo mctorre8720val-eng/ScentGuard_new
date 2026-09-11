@@ -11,6 +11,11 @@ data class Restaurant(
     val currentGasPpm: Int = 0,
     val airStatus: String = "SAFE", // "SAFE", "WARN", "DANGER"
     val fanStatus: String = "OFF", // "ON", "OFF"
+    val pumpStatus: String = "OFF", // "ON", "OFF"
+    val pumpMode: String = "AUTO", // "ON", "OFF", "AUTO"
+    val manualSanitationTrigger: Timestamp? = null,
+    val lastSanitationTime: Timestamp? = null,
+    val sanitationDurationSeconds: Int = 50, // Match firmware default
     val temperature: Float = 0f,
     val humidity: Float = 0f,
     val thresholdWarn: Int = 1000,

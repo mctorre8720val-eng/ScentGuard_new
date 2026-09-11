@@ -41,6 +41,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             modelClass.isAssignableFrom(ReportViewModel::class.java) -> {
                 ReportViewModel(app.reportRepository, app.chartRepository, app.authRepository) as T
             }
+            modelClass.isAssignableFrom(com.example.scentguard.ui.screens.sanitation.SanitationViewModel::class.java) -> {
+                com.example.scentguard.ui.screens.sanitation.SanitationViewModel(app.userRepository, app.historyRepository, app.authRepository) as T
+            }
             modelClass.isAssignableFrom(com.example.scentguard.ui.screens.provisioning.ProvisioningViewModel::class.java) -> {
                 com.example.scentguard.ui.screens.provisioning.ProvisioningViewModel(app) as T
             }

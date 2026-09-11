@@ -16,6 +16,7 @@ import com.example.scentguard.ui.screens.login.LoginScreen
 import com.example.scentguard.ui.screens.onboarding.OnboardingScreen
 import com.example.scentguard.ui.screens.profile.ProfileScreen
 import com.example.scentguard.ui.screens.reports.ReportsScreen
+import com.example.scentguard.ui.screens.sanitation.SanitationPumpScreen
 import com.example.scentguard.ui.screens.signup.SignUpScreen
 import com.example.scentguard.ui.screens.splash.SplashScreen
 import com.example.scentguard.ui.screens.staff.StaffScreen
@@ -74,6 +75,9 @@ fun SetupNavGraph(
         }
         composable(Screen.CriticalAlert.route) {
             CriticalAlertScreen(navController = navController, mainViewModel = mainViewModel)
+        }
+        composable(Screen.SanitationPump.route) {
+            SanitationPumpScreen(navController = navController, mainViewModel = mainViewModel)
         }
     }
 }

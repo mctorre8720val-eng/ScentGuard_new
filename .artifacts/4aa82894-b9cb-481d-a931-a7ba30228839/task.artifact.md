@@ -1,0 +1,10 @@
+- `[x]` Update `Restaurant` data model with sanitation fields
+- `[x]` Update `UserRepository` with pump control methods
+- `[x]` Add new navigation route for Sanitation Pump
+- `[x]` Implement `SanitationViewModel`
+- `[x]` Create `SanitationPumpScreen` UI
+    - `[x]` Hero Status Card with animations
+    - `[x]` Mode selection and manual trigger
+    - `[x]` Metrics and History sections
+- `[x]` Connect Dashboard pump card to the new screen
+- `[x]` Verify role-based access and offline states

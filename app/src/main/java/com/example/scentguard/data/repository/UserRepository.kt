@@ -63,6 +63,32 @@ class UserRepository(
     }
 
     /**
+     * Updates the pump mode for a restaurant.
+     */
+    suspend fun updatePumpMode(restaurantId: String, mode: String): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("restaurants").document(restaurantId).update("pumpMode", mode).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Triggers a manual sanitation cycle.
+     */
+    suspend fun triggerManualSanitation(restaurantId: String): Result<Unit> {
+        return try {
+            val db = firestore ?: return Result.failure(Exception("Firestore not initialized"))
+            db.collection("restaurants").document(restaurantId).update("manualSanitationTrigger", Timestamp.now()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Updates the gas safety thresholds for a restaurant.
      */
     suspend fun updateThresholds(restaurantId: String, warn: Int, danger: Int): Result<Unit> {

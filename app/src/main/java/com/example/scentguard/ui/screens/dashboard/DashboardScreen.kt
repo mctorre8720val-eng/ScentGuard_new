@@ -140,7 +140,6 @@ fun DashboardScreen(
                                 }
                                 Box(modifier = Modifier.weight(0.8f)) {
                                     StatisticsSection(
-                                        isOnline = isOnline, 
                                         fanStatus = liveData?.fanStatus ?: "OFF",
                                         signalStatus = signalStatus
                                     )
@@ -158,7 +157,6 @@ fun DashboardScreen(
                         }
                         item {
                             StatisticsSection(
-                                isOnline = isOnline, 
                                 fanStatus = liveData?.fanStatus ?: "OFF",
                                 signalStatus = signalStatus
                             )
@@ -170,7 +168,8 @@ fun DashboardScreen(
                             isWideScreen = isWideScreen,
                             gasLevel = if (isOnline) liveData?.currentGasPpm ?: 0 else 0,
                             temp = if (isOnline) liveData?.temperature ?: 0f else 0f,
-                            isOnline = isOnline
+                            pumpStatus = liveData?.pumpStatus ?: "OFF",
+                            onPumpClick = { navController.navigate(Screen.SanitationPump.route) }
                         )
                     }
 
@@ -433,7 +432,8 @@ fun MetricsGrid(
     isWideScreen: Boolean,
     gasLevel: Int,
     temp: Float,
-    isOnline: Boolean
+    pumpStatus: String = "OFF",
+    onPumpClick: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(
@@ -460,37 +460,26 @@ fun MetricsGrid(
             )
             if (isWideScreen) {
                 MetricCard(
-                    label = "Sync Status",
-                    value = if (!isOnline) "LOST" else "LIVE",
+                    label = "Sanitation Pump",
+                    value = if (pumpStatus == "ON") "Spraying" else "Standby",
                     unit = "",
-                    icon = Icons.Outlined.WifiTethering,
-                    modifier = Modifier.weight(1f),
-                    valueColor = if (!isOnline) MaterialTheme.colorScheme.error else Color(0xFF34C759)
+                    icon = Icons.Outlined.Opacity,
+                    modifier = Modifier.weight(1f).clickable { onPumpClick() },
+                    valueColor = if (pumpStatus == "ON") Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
         
         if (!isWideScreen) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                MetricCard(
-                    label = "Connection",
-                    value = if (isOnline) "Online" else "Offline",
-                    unit = "",
-                    icon = Icons.Outlined.Router,
-                    modifier = Modifier.weight(1f),
-                    valueStyle = MaterialTheme.typography.headlineMedium,
-                    valueColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
-                )
-                // Device ID / Info
-                MetricCard(
-                    label = "Hardware",
-                    value = "V1",
-                    unit = "",
-                    icon = Icons.Outlined.Memory,
-                    modifier = Modifier.weight(1f),
-                    valueStyle = MaterialTheme.typography.headlineMedium
-                )
-            }
+            MetricCard(
+                label = "Sanitation Pump",
+                value = if (pumpStatus == "ON") "Spraying" else "Standby",
+                unit = "",
+                icon = Icons.Outlined.Opacity,
+                modifier = Modifier.fillMaxWidth().clickable { onPumpClick() },
+                valueStyle = MaterialTheme.typography.headlineMedium,
+                valueColor = if (pumpStatus == "ON") Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -551,7 +540,7 @@ fun MetricCard(
 }
 
 @Composable
-fun StatisticsSection(isOnline: Boolean, fanStatus: String, signalStatus: String) {
+fun StatisticsSection(fanStatus: String, signalStatus: String) {
     Column {
         Text(
             "System performance",
@@ -577,13 +566,6 @@ fun StatisticsSection(isOnline: Boolean, fanStatus: String, signalStatus: String
                     "Weak" -> Color(0xFFFF9500)
                     else -> MaterialTheme.colorScheme.error
                 }
-            )
-            MiniStatCard(
-                "Health", 
-                if (isOnline) "Normal" else "Offline", 
-                Icons.Outlined.Analytics, 
-                Modifier.fillMaxWidth(),
-                statusColor = if (isOnline) Color(0xFF34C759) else MaterialTheme.colorScheme.error
             )
         }
     }
