@@ -6,42 +6,68 @@
 #include <BLEServer.h>
 #include <Preferences.h>
 #include "time.h"
+#include "DHT.h"
+
+// =====================================================
+// 1. CONFIGURATION
+// =====================================================
+
 #define API_KEY "AIzaSyC4J1wPaPlqn5i2UI46CcaaDnwmSu3BKUs"
 #define PROJECT_ID "scentguard-4thyear"
 #define DATABASE_URL "https://scentguard-4thyear-default-rtdb.asia-southeast1.firebasedatabase.app/"
+
+// BLE UUIDs
 #define SERVICE_UUID        "0000FF01-0000-1000-8000-00805F9B34FB"
 #define SSID_CHAR_UUID      "0000FF02-0000-1000-8000-00805F9B34FB"
 #define PASS_CHAR_UUID      "0000FF03-0000-1000-8000-00805F9B34FB"
 #define RID_CHAR_UUID       "0000FF04-0000-1000-8000-00805F9B34FB"
-#define TELEMETRY_INTERVAL 3000UL
-#define CONFIG_INTERVAL 2000UL
-#define HISTORY_INTERVAL 15000UL
+
+// Timing (Non-blocking)
+#define SERIAL_INTERVAL 1500UL
+#define TELEMETRY_INTERVAL 5000UL
+#define CONFIG_INTERVAL 5000UL
+#define HISTORY_INTERVAL 60000UL
+#define WIFI_RECOVERY_TIMEOUT 60000UL
+
 #define SPRAY_ON_TIME 3000UL
 #define SPRAY_OFF_TIME 2000UL
 #define SANITATION_CYCLES 10
 #define SANITATION_DURATION 50000UL
+
+// Pins
 #define RELAY_CH1_PIN 23
 #define RELAY_CH2_PIN 25
 #define MQ135_PIN 34
+#define DHTPIN 4
 #define GREEN_LED 18
 #define RED_LED 19
 #define BOOT_BUTTON 0
+
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// =====================================================
+// 3. GLOBALS
+// =====================================================
+
 Preferences preferences;
 bool isProvisioning = false;
 String receivedSSID = "";
 String receivedPASS = "";
 String receivedRID = "";
+
 String activeRestaurantId = "";
 int thresholdWarn = 1000;
 int thresholdDanger = 1500;
-FirebaseData fbdo_telem;
-FirebaseData fbdo_config;
-FirebaseData fbdo_hist;
+
+FirebaseData fbdo_telem, fbdo_config, fbdo_hist;
 FirebaseAuth auth;
 FirebaseConfig config;
-unsigned long lastTelem = 0;
-unsigned long lastConfig = 0;
-unsigned long lastHist = 0;
+
+unsigned long lastSerial = 0, lastTelem = 0, lastConfig = 0, lastHist = 0;
+unsigned long wifiLostTime = 0;
+bool wifiLossHandled = false;
+
 String currentFanMode = "AUTO";
 bool isFanPhysicallyActive = false;
 bool isSanitationActive = false;
@@ -51,6 +77,9 @@ unsigned long lastSprayChangeTime = 0;
 int sanitationCycleCount = 0;
 bool wasInDanger = false;
 String lastInternalStatus = "SAFE";
+
+float currentTemp = 0.0;
+float currentHum = 0.0;
 void setFan(bool enabled) {
     digitalWrite(
             RELAY_CH1_PIN,
@@ -570,158 +599,71 @@ void uploadHistorySnapshot(
     }
 }
 void setup() {
-    Serial.begin(
-            115200
-    );
-    pinMode(
-            RELAY_CH1_PIN,
-            OUTPUT
-    );
-    digitalWrite(
-            RELAY_CH1_PIN,
-            HIGH
-    );
-    pinMode(
-            RELAY_CH2_PIN,
-            OUTPUT
-    );
-    digitalWrite(
-            RELAY_CH2_PIN,
-            HIGH
-    );
-    pinMode(
-            GREEN_LED,
-            OUTPUT
-    );
-    pinMode(
-            RED_LED,
-            OUTPUT
-    );
-    pinMode(
-            BOOT_BUTTON,
-            INPUT_PULLUP
-    );
-    if (
-            digitalRead(
-                    BOOT_BUTTON
-            ) == LOW
-            ) {
-        Serial.println(
-                "Reset Mode... Hold 5s"
-        );
+    Serial.begin(115200);
+
+    // Initialize DHT11
+    dht.begin();
+
+    pinMode(RELAY_CH1_PIN, OUTPUT);
+    digitalWrite(RELAY_CH1_PIN, HIGH);
+    pinMode(RELAY_CH2_PIN, OUTPUT);
+    digitalWrite(RELAY_CH2_PIN, HIGH);
+    pinMode(GREEN_LED, OUTPUT);
+    pinMode(RED_LED, OUTPUT);
+    pinMode(BOOT_BUTTON, INPUT_PULLUP);
+
+    if (digitalRead(BOOT_BUTTON) == LOW) {
+        Serial.println("Reset Mode... Hold 5s");
         delay(5000);
-        if (
-                digitalRead(
-                        BOOT_BUTTON
-                ) == LOW
-                ) {
-            preferences.begin(
-                    "scentguard",
-                    false
-            );
+        if (digitalRead(BOOT_BUTTON) == LOW) {
+            preferences.begin("scentguard", false);
             preferences.clear();
             preferences.end();
-            Serial.println(
-                    "NVS Cleared. Restarting..."
-            );
+            Serial.println("NVS Cleared. Restarting...");
             ESP.restart();
         }
     }
-    if (
-            !loadCredentials()
-            ) {
+
+    if (!loadCredentials()) {
         startProvisioning();
-    }
-    else {
+    } else {
         syncTime();
-        config.api_key =
-                API_KEY;
-        config.database_url =
-                DATABASE_URL;
-        config.token_status_callback =
-                tokenStatusCallback;
-        Firebase.signUp(
-                &config,
-                &auth,
-                "",
-                ""
-        );
-        Firebase.begin(
-                &config,
-                &auth
-        );
-        Firebase.reconnectWiFi(
-                true
-        );
-        Serial.println(
-                "Firebase Ready."
-        );
+        config.api_key = API_KEY;
+        config.database_url = DATABASE_URL;
+        config.token_status_callback = tokenStatusCallback;
+        Firebase.signUp(&config, &auth, "", "");
+        Firebase.begin(&config, &auth);
+        Firebase.reconnectWiFi(true);
+        Serial.println("Firebase Ready.");
     }
 }
+
 void loop() {
-    if (
-            isProvisioning
-            ) {
-        digitalWrite(
-                RED_LED,
-                (millis() / 500) % 2 == 0
-        );
-        if (
-                receivedSSID != "" &&
-                receivedPASS != "" &&
-                receivedRID != ""
-                ) {
-            Serial.println(
-                    "\nTesting connection..."
-            );
-            WiFi.disconnect(
-                    true
-            );
+    unsigned long now = millis();
+
+    if (isProvisioning) {
+        digitalWrite(RED_LED, (now / 500) % 2 == 0);
+        if (receivedSSID != "" && receivedPASS != "" && receivedRID != "") {
+            Serial.println("\nTesting connection...");
+            WiFi.disconnect(true);
             delay(1000);
-            WiFi.begin(
-                    receivedSSID.c_str(),
-                    receivedPASS.c_str()
-            );
-            unsigned long start =
-                    millis();
-            while (
-                    WiFi.status() != WL_CONNECTED &&
-                    millis() - start < 10000
-                    ) {
+            WiFi.begin(receivedSSID.c_str(), receivedPASS.c_str());
+            unsigned long start = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
                 delay(500);
                 Serial.print(".");
             }
-            if (
-                    WiFi.status() ==
-                    WL_CONNECTED
-                    ) {
-                preferences.begin(
-                        "scentguard",
-                        false
-                );
-                preferences.putString(
-                        "ssid",
-                        receivedSSID
-                );
-                preferences.putString(
-                        "pass",
-                        receivedPASS
-                );
-                preferences.putString(
-                        "rid",
-                        receivedRID
-                );
+            if (WiFi.status() == WL_CONNECTED) {
+                preferences.begin("scentguard", false);
+                preferences.putString("ssid", receivedSSID);
+                preferences.putString("pass", receivedPASS);
+                preferences.putString("rid", receivedRID);
                 preferences.end();
-                Serial.println(
-                        "\nSuccess! Restarting..."
-                );
+                Serial.println("\nSuccess! Restarting...");
                 delay(2000);
                 ESP.restart();
-            }
-            else {
-                Serial.println(
-                        "\nFailed. Waiting for new credentials..."
-                );
+            } else {
+                Serial.println("\nFailed. Waiting for new credentials...");
                 receivedSSID = "";
                 receivedPASS = "";
                 receivedRID = "";
@@ -729,140 +671,89 @@ void loop() {
         }
         return;
     }
-    int gasValue =
-            analogRead(
-                    MQ135_PIN
-            );
-    String airStatus;
-    if (
-            gasValue >= thresholdDanger
-            ) {
-        airStatus = "DANGER";
-    }
-    else if (
-            gasValue >= thresholdWarn
-            ) {
-        airStatus = "WARN";
-    }
-    else {
-        airStatus = "SAFE";
-    }
-    if (
-            airStatus != lastInternalStatus
-            ) {
-        Serial.print(
-                "Air Status: "
-        );
-        Serial.println(
-                airStatus
-        );
-        if (
-                airStatus != "SAFE" &&
-                isSanitationActive
-                ) {
-            Serial.println(
-                    "Sanitation interrupted: Air quality increased"
-            );
+
+    // 1. FAST SENSOR READING (Non-blocking)
+    int gasValue = analogRead(MQ135_PIN);
+
+    // Read DHT11
+    float t = dht.readTemperature();
+    float h = dht.readHumidity();
+    if (!isnan(t)) currentTemp = t;
+    if (!isnan(h)) currentHum = h;
+
+    String airStatus = (gasValue >= thresholdDanger) ? "DANGER" : (gasValue >= thresholdWarn ? "WARN" : "SAFE");
+
+    // 2. STATUS CHANGE LOGIC
+    if (airStatus != lastInternalStatus) {
+        if (airStatus != "SAFE" && isSanitationActive) {
             stopSanitation();
         }
-        if (
-                airStatus == "DANGER"
-                ) {
+        if (airStatus == "DANGER") {
             wasInDanger = true;
         }
-        if (
-                wasInDanger &&
-                airStatus == "SAFE" &&
-                !isSanitationActive
-                ) {
+        if (wasInDanger && airStatus == "SAFE" && !isSanitationActive) {
             wasInDanger = false;
-            if (
-                    currentFanMode != "ON"
-                    ) {
+            if (currentFanMode != "ON") {
                 startSanitation();
             }
         }
-        lastInternalStatus =
-                airStatus;
+        lastInternalStatus = airStatus;
     }
+
     updateSanitation();
-    bool fanShouldBeOn =
-            false;
-    if (
-            currentFanMode == "ON"
-            ) {
-        fanShouldBeOn =
-                true;
+
+    // 3. FAN CONTROL
+    bool fanShouldBeOn = (currentFanMode == "ON") || (currentFanMode == "AUTO" && airStatus != "SAFE");
+    if (isSanitationActive && currentFanMode == "AUTO") {
+        fanShouldBeOn = false;
     }
-    else if (
-            currentFanMode == "OFF"
-            ) {
-        fanShouldBeOn =
-                false;
+    setFan(fanShouldBeOn);
+
+    digitalWrite(GREEN_LED, airStatus == "SAFE");
+    digitalWrite(RED_LED, airStatus != "SAFE");
+
+    // 4. WI-FI RECOVERY WATCHDOG
+    if (WiFi.status() != WL_CONNECTED) {
+        if (wifiLostTime == 0) {
+            wifiLostTime = now;
+        } else if (now - wifiLostTime >= WIFI_RECOVERY_TIMEOUT && !wifiLossHandled) {
+            Serial.println("\n[WATCHDOG] Wi-Fi lost for 60s. Entering Recovery (BLE)...");
+            wifiLossHandled = true;
+            startProvisioning();
+            return;
+        }
+    } else {
+        wifiLostTime = 0;
+        wifiLossHandled = false;
     }
-    else {
-        fanShouldBeOn =
-                (airStatus != "SAFE");
+
+    // 5. SERIAL MONITOR OUTPUT (1.5s Interval)
+    if (now - lastSerial >= SERIAL_INTERVAL) {
+        lastSerial = now;
+        Serial.println("--------------------------------------");
+        Serial.printf("[SENSOR] Gas: %d | Temp: %.1f°C | Status: %s\n", gasValue, currentTemp, airStatus.c_str());
+        Serial.printf("[FAN] Status: %s | Mode: %s\n", isFanPhysicallyActive ? "ON" : "OFF", currentFanMode.c_str());
+        Serial.printf("[PUMP] Status: %s\n", isSanitationActive ? "ACTIVE" : "READY");
+        Serial.printf("[WIFI] %s\n", (WiFi.status() == WL_CONNECTED) ? "Connected" : "Disconnected");
+        Serial.printf("[FIREBASE] %s\n", Firebase.ready() ? "Connected" : "Offline");
     }
-    if (
-            isSanitationActive &&
-            currentFanMode == "AUTO"
-            ) {
-        fanShouldBeOn =
-                false;
+
+    // 6. FIREBASE SYNC (Intervals)
+    if (Firebase.ready()) {
+        if (now - lastConfig >= CONFIG_INTERVAL) {
+            lastConfig = now;
+            readRemoteConfig();
+        }
+        if (now - lastTelem >= TELEMETRY_INTERVAL) {
+            lastTelem = now;
+            uploadTelemetry(gasValue, airStatus);
+        }
+        if (now - lastHist >= HISTORY_INTERVAL) {
+            lastHist = now;
+            uploadHistorySnapshot(gasValue, airStatus);
+        }
     }
-    setFan(
-            fanShouldBeOn
-    );
-    digitalWrite(
-            GREEN_LED,
-            airStatus == "SAFE"
-    );
-    digitalWrite(
-            RED_LED,
-            airStatus != "SAFE"
-    );
-    if (
-            Firebase.ready() &&
-            (
-                    lastConfig == 0 ||
-                    millis() - lastConfig >=
-                    CONFIG_INTERVAL
-            )
-            ) {
-        lastConfig =
-                millis();
-        readRemoteConfig();
-    }
-    if (
-            Firebase.ready() &&
-            (
-                    lastTelem == 0 ||
-                    millis() - lastTelem >=
-                    TELEMETRY_INTERVAL
-            )
-            ) {
-        lastTelem =
-                millis();
-        uploadTelemetry(
-                gasValue,
-                airStatus
-        );
-    }
-    if (
-            Firebase.ready() &&
-            (
-                    lastHist == 0 ||
-                    millis() - lastHist >=
-                    HISTORY_INTERVAL
-            )
-            ) {
-        lastHist =
-                millis();
-        uploadHistorySnapshot(
-                gasValue,
-                airStatus
-        );
-    }
-    delay(100);
+
+    // Small yield to avoid watchdog issues
+    delay(10);
 }

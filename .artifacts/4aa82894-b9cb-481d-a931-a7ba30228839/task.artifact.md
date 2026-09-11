@@ -1,10 +1,7 @@
-- `[x]` Update `Restaurant` data model with sanitation fields
-- `[x]` Update `UserRepository` with pump control methods
-- `[x]` Add new navigation route for Sanitation Pump
-- `[x]` Implement `SanitationViewModel`
-- `[x]` Create `SanitationPumpScreen` UI
-    - `[x]` Hero Status Card with animations
-    - `[x]` Mode selection and manual trigger
-    - `[x]` Metrics and History sections
-- `[x]` Connect Dashboard pump card to the new screen
-- `[x]` Verify role-based access and offline states
+- `[x]` Refactor ESP32 firmware `loop()` to be non-blocking using `millis()`
+- `[x]` Integrate DHT11 sensor (GPIO 4) for temperature and humidity
+- `[x]` Implement fast Serial Monitor reporting (1.5s interval)
+- `[x]` Update Firebase telemetry to 5s interval
+- `[x]` Implement 60s Wi-Fi recovery watchdog to auto-trigger BLE provisioning
+- `[x]` Verify Serial output continues even when Wi-Fi/Firebase is offline
+- `[x]` Ensure restaurant binding is preserved during Wi-Fi reconfiguration

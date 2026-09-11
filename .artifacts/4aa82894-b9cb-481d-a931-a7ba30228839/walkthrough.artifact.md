@@ -1,38 +1,45 @@
-# Walkthrough - Sanitation Pump Redesign
+# ESP32 Firmware Performance & Serial Monitoring Optimization
 
-The Sanitation Pump has been transformed into a complete, high-fidelity feature. It now has its own dedicated management screen with a modern, emerald-themed design consistent with the ScentGuard brand.
+The ESP32 firmware has been refactored to prioritize responsiveness and provide real-time local monitoring independent of cloud connectivity.
 
-## Key Enhancements
+## Key Improvements
 
-### 1. Dedicated Sanitation Management Screen
-A new screen [SanitationPumpScreen.kt](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/sanitation/SanitationPumpScreen.kt) has been added. It features:
-- **Hero Status Card**: A prominent visual indicator of the pump's current state (Active/Ready/Offline) with breathing animations when spraying.
-- **Role-Based Control**: Managers can toggle between `AUTO` and `OFF` modes and manually trigger a sanitation cycle.
-- **Smart Feedback**: The UI automatically disables controls and shows a warning when the hardware is offline.
+### 1. Non-Blocking Architecture
+The `loop()` function now uses `millis()`-based timers instead of `delay()`. This ensures that slow Firebase operations or Wi-Fi reconnections do not freeze the system. Sensors are read every cycle, and status logic executes instantly.
 
-### 2. Expanded Data Integration
-The [Restaurant](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/data/model/Restaurant.kt) data model now tracks:
-- `pumpMode`: The operating preference (Automatic or Forced Off).
-- `manualSanitationTrigger`: A timestamp field that the ESP32 can listen to for immediate manual activation.
-- `lastSanitationTime`: Logs the most recent activity.
+### 2. Fast Serial Monitoring
+Serial output is now structured and frequent, updating every **1.5 seconds**.
+**Example Output:**
+```text
+--------------------------------------
+[SENSOR] Gas: 842 | Temp: 31.2°C | Status: SAFE
+[FAN] Status: OFF | Mode: AUTO
+[PUMP] Status: READY
+[WIFI] Connected
+[FIREBASE] Connected
+```
+This allows for real-time debugging even when the device is experiencing network latency.
 
-### 3. Dashboard Integration
-The Sanitation Pump card on the main [Dashboard](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/dashboard/DashboardScreen.kt) is now interactive. Clicking it provides a smooth transition to the full management view.
+### 3. DHT11 Temperature Integration
+Full support for the DHT11 sensor has been added on **GPIO 4**. The system now tracks both temperature and humidity, which are displayed on the Serial Monitor and sent to Firebase.
 
-### 4. Safety & History
-- **Safety Notice**: A dedicated section reminds users to check equipment before manual operation.
-- **Cycle History**: A timeline view displays recent sanitation events with their duration and completion status.
+### 4. Smart Wi-Fi Recovery
+Implemented a 60-second Wi-Fi loss watchdog. If the device remains disconnected from the network for more than a minute:
+- It automatically enters **BLE Provisioning Mode**.
+- The existing **Restaurant Binding (RID) is preserved**.
+- The Red LED blinks to signal recovery mode.
 
-## Verification Results
+### 5. Telemetry & Cloud Sync
+- **Telemetry**: Sent every 5 seconds.
+- **Remote Config**: Synced every 5 seconds.
+- **History Snapshots**: Uploaded every 60 seconds.
 
-### Manual Verification
-- **Navigation**: Verified that clicking the Pump card on the Dashboard navigates to the Sanitation screen.
-- **Offline Handling**: Simulated offline state by older `lastSeen` timestamp; verified that "Hardware Offline" card appears and controls are disabled.
-- **Permissions**: Verified that "Start Manual Sanitation" is disabled for Staff roles.
-- **UI Animations**: Verified the flow-effect animation on the Hero card when `pumpStatus` is `ON`.
+## Physical Verification Required
+> [!IMPORTANT]
+> While the code logic is verified, the following requires physical testing with the ESP32 hardware:
+> 1. **DHT11 Reading Accuracy**: Verify temperature values match environmental conditions.
+> 2. **60s Recovery Trigger**: Unplug the Wi-Fi router and verify the ESP32 enters BLE mode after exactly 60 seconds.
+> 3. **Manual Reset**: Verify the 5-second hold on the BOOT button still clears NVS as expected.
 
-> [!TIP]
-> To see the sanitation history in action, ensure your ESP32 firmware is sending `PUMP` event types in its Firestore logs.
-
-render_diffs(file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/sanitation/SanitationPumpScreen.kt)
-render_diffs(file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/app/src/main/java/com/example/scentguard/ui/screens/dashboard/DashboardScreen.kt)
+## Files Modified
+- [ScentGuard.ino](file:///Users/michaelangelotorre/StudioProjects/ScentGuard_new/firmware/ScentGuard.ino)
