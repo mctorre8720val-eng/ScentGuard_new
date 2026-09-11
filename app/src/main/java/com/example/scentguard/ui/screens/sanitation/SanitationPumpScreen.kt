@@ -319,7 +319,8 @@ fun SanitationMetricsSection(restaurant: Restaurant?) {
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             InfoMetricCard("Last Cycle", restaurant?.lastSanitationTime?.let { SimpleDateFormat("hh:mm a", Locale.getDefault()).format(it.toDate()) } ?: "Never", Modifier.weight(1f))
-            InfoMetricCard("Duration", "\${restaurant?.sanitationDurationSeconds ?: 50}s", Modifier.weight(1f))
+            val durationSeconds = restaurant?.sanitationDurationSeconds ?: 50
+            InfoMetricCard("Duration", "${durationSeconds}s", Modifier.weight(1f))
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.scentguard.ui.screens.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -98,6 +99,37 @@ fun HistoryScreen(
                             }
                         },
                         actions = {
+                            if (user?.role?.uppercase() == "MANAGER") {
+                                var showDeleteAllDialog by remember { mutableStateOf(false) }
+                                
+                                if (showDeleteAllDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = { showDeleteAllDialog = false },
+                                        title = { Text("Delete All Logs?") },
+                                        text = { Text("This will permanently remove all system logs for this restaurant. This action cannot be undone.") },
+                                        confirmButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    viewModel.deleteAllLogs()
+                                                    showDeleteAllDialog = false
+                                                },
+                                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                            ) {
+                                                Text("Delete All", fontWeight = FontWeight.Bold)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showDeleteAllDialog = false }) {
+                                                Text("Cancel")
+                                            }
+                                        }
+                                    )
+                                }
+                                
+                                IconButton(onClick = { showDeleteAllDialog = true }) {
+                                    Icon(Icons.Outlined.DeleteSweep, contentDescription = "Delete All", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
                             IconButton(onClick = { viewModel.fetchHistory() }) {
                                 Icon(Icons.Outlined.Refresh, contentDescription = "Refresh")
                             }
@@ -189,8 +221,10 @@ fun HistoryScreen(
                                 HistoryList(
                                     items = filteredItems, 
                                     isLoadingMore = isLoadingMore,
+                                    isManager = user?.role?.uppercase() == "MANAGER",
                                     lazyListState = lazyListState,
-                                    onLoadMore = { viewModel.loadNextPage() }
+                                    onLoadMore = { viewModel.loadNextPage() },
+                                    onDelete = { viewModel.deleteLog(it) }
                                 )
                             }
                             is Resource.Error -> {
@@ -229,8 +263,10 @@ fun HistoryScreen(
 fun HistoryList(
     items: List<HistoryItem>,
     isLoadingMore: Boolean,
+    isManager: Boolean,
     lazyListState: LazyListState = rememberLazyListState(),
-    onLoadMore: () -> Unit
+    onLoadMore: () -> Unit,
+    onDelete: (HistoryItem) -> Unit
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -264,8 +300,14 @@ fun HistoryList(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(items) { item ->
-                HistoryCard(item)
+            items(items, key = { it.id }) { item ->
+                SwipeToDeleteContainer(
+                    item = item,
+                    onDelete = onDelete,
+                    enabled = isManager
+                ) {
+                    HistoryCard(item)
+                }
             }
             
             item {
@@ -441,4 +483,58 @@ fun HistoryCard(item: HistoryItem) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDeleteContainer(
+    item: HistoryItem,
+    onDelete: (HistoryItem) -> Unit,
+    enabled: Boolean,
+    content: @Composable () -> Unit
+) {
+    if (!enabled) {
+        content()
+        return
+    }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) {
+                onDelete(item)
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(color)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    Icons.Outlined.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
+        content = {
+            content()
+        }
+    )
 }

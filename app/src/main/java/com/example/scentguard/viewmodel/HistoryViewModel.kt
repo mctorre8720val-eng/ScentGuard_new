@@ -139,4 +139,39 @@ class HistoryViewModel(
     fun fetchHistory(restaurantId: String? = null) {
         refreshHistory()
     }
+
+    fun deleteLog(item: HistoryItem) {
+        val rid = authRepository.userSession.value?.restaurantId ?: return
+        if (authRepository.userSession.value?.role?.uppercase() != "MANAGER") return
+
+        viewModelScope.launch {
+            // Optimistic update
+            val currentState = _historyState.value
+            if (currentState is Resource.Success) {
+                val currentItems = currentState.data ?: emptyList()
+                _historyState.value = Resource.Success(currentItems.filter { it.id != item.id })
+            }
+
+            val result = historyRepository.deleteLogEntry(rid, item.id)
+            result.onFailure {
+                // Rollback or handle error - for now refresh
+                refreshHistory()
+            }
+        }
+    }
+
+    fun deleteAllLogs() {
+        val rid = authRepository.userSession.value?.restaurantId ?: return
+        if (authRepository.userSession.value?.role?.uppercase() != "MANAGER") return
+
+        viewModelScope.launch {
+            _historyState.value = Resource.Loading()
+            val result = historyRepository.deleteAllLogs(rid)
+            result.onSuccess {
+                refreshHistory()
+            }.onFailure {
+                _historyState.value = Resource.Error(it.message ?: "Failed to delete logs")
+            }
+        }
+    }
 }

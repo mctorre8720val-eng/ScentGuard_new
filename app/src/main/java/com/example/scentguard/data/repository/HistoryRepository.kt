@@ -181,4 +181,46 @@ class HistoryRepository(
             Result.failure(e)
         }
     }
+
+    /**
+     * Deletes a specific log entry.
+     */
+    suspend fun deleteLogEntry(restaurantId: String, logId: String): Result<Unit> {
+        if (restaurantId.isBlank() || logId.isBlank()) return Result.failure(Exception("Invalid data"))
+        return try {
+            firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("logs")
+                .document(logId)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Deletes all logs for a specific restaurant.
+     * Note: Firestore client SDK doesn't support deleting a whole collection in one call.
+     * We delete documents in the collection.
+     */
+    suspend fun deleteAllLogs(restaurantId: String): Result<Unit> {
+        if (restaurantId.isBlank()) return Result.failure(Exception("Invalid Restaurant ID"))
+        return try {
+            val collectionRef = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("logs")
+            
+            val snapshot = collectionRef.get().await()
+            val batch = firestore.batch()
+            for (doc in snapshot.documents) {
+                batch.delete(doc.reference)
+            }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
